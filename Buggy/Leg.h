@@ -2,7 +2,7 @@
 #define LEG_H__
 
 #include <math.h>
-#include "Servo.h"
+#include <Servo.h>
 // #include "WProgram.h"
 
 #define sqr(x) ((x)*(x))
