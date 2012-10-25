@@ -1,4 +1,3 @@
-#include <Servo.h>
 #include "Leg.h"
 
 Leg legs[6];
