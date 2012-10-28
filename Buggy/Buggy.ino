@@ -18,13 +18,14 @@ static Point stateLinearMovement;
 
 void processState()
 {
+    // TODO:
     for (int i = 0; i < N; ++i)
         legs[i].reachRelativeToCurrent(stateLinearMovement);
 }
 
-void walk(Leg* legs, int iterations, Point direction)
+void walk(int steps, Point direction)
 {
-    for (int i = 0; i < iterations; i++)
+    for (int i = 0; i < steps; i++)
     {
         for(float p = 0; p <= 2; p += 0.025)
         {
@@ -57,7 +58,7 @@ void walk(Leg* legs, int iterations, Point direction)
             if (legs[1].getCurrentRelative().maxDistance(group2) > 5)
                 smoothTo(group2, 1);
                     
-            for (int li = 0; li < 6; li+=2)
+            for (int li = 0; li < N; li+=2)
             {
                     
               
@@ -197,15 +198,15 @@ void setup()
   }*/
   
 
-  walk(legs, 4, Point(0, 80, 50));
-  walk(legs, 4, Point(-70, 0, 50));
-  walk(legs, 4, Point(0, -80, 50));
-  walk(legs, 4, Point(70, 0, 50));
+  walk(4, Point(0, 80, 50));
+  walk(4, Point(-70, 0, 50));
+  walk(4, Point(0, -80, 50));
+  walk(4, Point(70, 0, 50));
 
-  walk(legs, 2, Point(60, 60, 50));
-  walk(legs, 2, Point(-60, 60, 50));
-  walk(legs, 2, Point(-60, -60, 50));
-  walk(legs, 2, Point(60, -60, 50));
+  walk(2, Point(60, 60, 50));
+  walk(2, Point(-60, 60, 50));
+  walk(2, Point(-60, -60, 50));
+  walk(2, Point(60, -60, 50));
 
 
   smoothTo(zero);
