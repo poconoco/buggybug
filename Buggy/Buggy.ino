@@ -1,122 +1,29 @@
+#include <Servo.h>
 #include "Leg.h"
 
-Leg legs[6];
-
-Leg* rightLegs = legs;
-Leg* leftLegs = legs + 3;
-
+// TODO: Remove this temporary goo
 void log(const char* x) { Serial.println(x); }
 void log(float x) { Serial.println(x); }
 void log(int x) { Serial.println(x); }
 
-void squareInConstXPlane(Leg& leg)
+static Leg legs[6];
+static int N = 6;//sizeof(legs) / sizeof(Leg);
+
+static Leg* rightLegs = legs;
+static Leg* leftLegs = legs + N / 2;
+
+static Point zero(0,0,0);
+
+static Point stateLinearMovement;
+
+void processState()
 {
-    for (int i = 0; i <= 60; i++)
-    {
-      leg.reach(Point(70, -30 + i, 10));
-      delay(5);
-    }
-  
-    for (int i = 0; i <= 60; i++)
-    {
-      leg.reach(Point(70, 30, 10 - i));
-      delay(5);
-    }
-  
-    for (int i = 0; i <= 60; i++)
-    {
-      leg.reach(Point(70, 30 - i, -50));
-      delay(5);
-    }
-  
-    for (int i = 0; i <= 60; i++)
-    {
-      leg.reach(Point(70, -30, -50 + i));
-      delay(5);
-    }
+    for (int i = 0; i < N; ++i)
+        legs[i].reachRelativeToCurrent(stateLinearMovement);
 }
 
-
-
-void squareInConstZPlane(Leg& leg)
+void walk(Leg* legs, int iterations, Point direction)
 {
-    int z = -50;
-    int pause = 0;
-    int speedd = 5;
-  
-    for (int i = 0; i <= 60; i++)
-    {
-      leg.reach(Point(30, -50 + i, z));
-      delay(speedd);
-    }
-    delay(pause);
-  
-    for (int i = 0; i <= 40; i++)
-    {
-      leg.reach(Point(30 + i, 10, z));
-      delay(speedd);
-    }
-    delay(pause);
-  
-    for (int i = 0; i <= 60; i++)
-    {
-      leg.reach(Point(70, 10 - i, z));
-      delay(speedd);
-    }
-    delay(pause);
-  
-    for (int i = 0; i <= 40; i++)
-    {
-      leg.reach(Point(70 - i, -50, z));
-      delay(speedd);
-    }
-    delay(pause);
-}
-
-/*
-void circleInConstZPlane()
-{
-    float z = -50;
-    
-    float r = 30;
-    float cx = 50;
-    float cy = -20;
-    
-    for (float pol = 0; pol < PI * 2; pol+=0.1)
-    {
-        test.reach({ r * cos(pol) + cx, r * sin(pol) + cy, z });
-        delay(5);
-    }
-}
-*/
-
-void forwardBackward(Leg* legs, int legNum, int legStep, Point start, Point relativeEnd, int iterations)
-{
-    for (int i = 0; i < iterations; i++)
-    {
-        for(float p = 0; p <= 2; p += 0.02)
-        {
-            float progress; 
-            if (p < 1) progress = p;
-            else progress = 1 - (p - 1); 
-          
-            Point current(start.x + progress * relativeEnd.x,
-                              start.y + progress * relativeEnd.y,
-                              start.z + progress * relativeEnd.z );
-
-            for (int li = 0; li < legNum * legStep; li += legStep)
-                legs[li].reachRelative(current);                  
-
-            delay(10);
-        }        
-    }
-}
-
-void walk(Leg* legs, int iterations)
-{
-    // Point(0, -60, 0)
-    // Point(0, 60, 0)
-    float stepLength = 80;
     for (int i = 0; i < iterations; i++)
     {
         for(float p = 0; p <= 2; p += 0.02)
@@ -128,30 +35,65 @@ void walk(Leg* legs, int iterations)
             {
                 progress = p;
                 height1 = 0;
-                height2 = 60 * (0.5 - fabs(0.5 - p));
+                height2 = direction.z * (0.5 - fabs(0.5 - p));
             }
             else 
             {
                 progress = 1 - (p - 1);
-                height1 = 60 * (0.5 - fabs(1.5 - p));
+                height1 = direction.z * (0.5 - fabs(1.5 - p));
                 height2 = 0;
             }
           
-            Point group1(0,
-                         -60 + (stepLength - progress * stepLength),
+            Point group1(- direction.x / 2 + (direction.x - progress * direction.x),
+                         - direction.y / 2 + (direction.y - progress * direction.y),
                          height1);
-            Point group2(0,
-                         -60 + progress * stepLength,
+            Point group2(- direction.x / 2 + progress * direction.x,
+                         - direction.y / 2 + progress * direction.y,
                          height2);
 
-            for (int li = 0; li < 3; li++)
+
+            if (legs[0].getCurrentRelative().maxDistance(group1) > 10)
+                smoothTo(group1, 0);
+            if (legs[1].getCurrentRelative().maxDistance(group2) > 5)
+                smoothTo(group2, 1);
+                    
+            for (int li = 0; li < 6; li+=2)
             {
-                legs[li * 2].reachRelative(group1);                  
-                legs[li * 2 + 1].reachRelative(group2);                  
+                    
+              
+                legs[li].reachRelativeToDefault(group1);                  
+                legs[li + 1].reachRelativeToDefault(group2);                  
             }
 
-            delay(2);
+            delay(1);
         }        
+    }
+}
+
+void smoothTo(Point& to)
+{
+    smoothTo(to, 0);
+    smoothTo(to, 1);
+}
+
+// Relative to default!
+void smoothTo(Point& to, int legGroup)
+{
+    Point relative[N];
+    for (int i = legGroup; i < N; i += 2)
+        relative[i].assign((legs[i].getDefaultPos() + to) - legs[i].getCurrentPos());
+  
+    for(float p = 0; p <= 1; p += 0.02)
+    {
+        for (int li = legGroup; li < N; li += 2)
+        {
+            Point currSubStep = relative[li] * p;
+            Point currStep = legs[li].getCurrentPos() + currSubStep;
+            currStep.z = legs[li].getDefaultPos().z + to.z + 50 * (0.5 - fabs(0.5 - p));
+            legs[li].reach(currStep);
+        }
+        
+        delay(5);
     }
 }
 
@@ -193,17 +135,33 @@ void configureLegs()
     rightLegs[2].configureCoxa( 34, -65, deg2rad(-         63),  10);                        
     leftLegs [2].configureCoxa(-34, -65, deg2rad(- (180 - 63)), -10);
 
-    rightLegs[0].configureDefaultReach(Point( 54, 140, -80));
-    leftLegs [0].configureDefaultReach(Point(-54, 140, -80));
+    rightLegs[0].configureDefault(Point( 84, 130, -70), true);
+    leftLegs [0].configureDefault(Point(-84, 130, -70), true);
   
-    rightLegs[1].configureDefaultReach(Point( 100, 30, -80));
-    leftLegs [1].configureDefaultReach(Point(-100, 30, -80));
+    rightLegs[1].configureDefault(Point( 120, 30, -70), true);
+    leftLegs [1].configureDefault(Point(-120, 30, -70), true);
 
-    rightLegs[2].configureDefaultReach(Point( 74, -80, -80));
-    leftLegs [2].configureDefaultReach(Point(-74, -80, -80));
+    rightLegs[2].configureDefault(Point( 94, -80, -70), true);
+    leftLegs [2].configureDefault(Point(-94, -80, -70), true);
     
-    //for (Leg* leg = legs; leg < legs + 6; leg++)
-      //  leg->reachRelative(Point(0,0,0));
+    // Fine tuning
+/*    rightLegs[0].tuneRestAngles(PI / 2,
+                                PI / 2 + deg2rad(10),
+                                PI / 2);
+    leftLegs[0].tuneRestAngles(PI / 2,
+                                PI / 2 + deg2rad(10),
+                                PI / 2);
+*/
+    leftLegs[1].tuneRestAngles(PI / 2,
+                                PI / 2,
+                                PI / 2 - deg2rad(10));
+
+    rightLegs[1].tuneRestAngles(PI / 2,
+                                PI / 2,
+                                PI / 2 + deg2rad(10));
+    
+    for (Leg* leg = legs; leg < legs + 6; leg++)
+        leg->reachRelativeToDefault(zero);
       //leg->reset();
 }
 
@@ -218,32 +176,31 @@ void setup()
     
 
     configureLegs();
-    //rightLegs[0].attach(46, 47, 39);
-    //rightLegs[0].reset();  
-  
-//  rightLegs[0].rechRelative(Point(0, 0, 0));
-//  leftLegs[0].rechRelative(Point(0, 0, 0));
- 
- /* 
-  forwardBackward(legs, 
-                  3,
-                  2, 
-                  Point(0, -60, 0), 
-                  Point(0, 60, 0), 
-                  5);
-                  */
 
-  walk(legs, 10);
-
-  
-  for (int n = 0; n < 4; n++)
+ /* stateLinearMovement.assign(0, -1, 0);
+  for (int i = 0; i < 50; ++i)
   {
-    //circleInConstZPlane();
-    //squareInConstZPlane(rightLegs[0]);
-    //squareInConstXPlane(rightLegs[0]);
+      processState();
+      delay(20);
   }
+
+  stateLinearMovement.assign(0, 1, 0);
+  for (int i = 0; i < 50; ++i)
+  {
+      processState();
+      delay(10);
+  }*/
   
-  //test.reset();
+
+  walk(legs, 2, Point(50, 50, 60));
+  walk(legs, 2, Point(-50, 50, 60));
+  walk(legs, 2, Point(-50, -50, 60));
+  walk(legs, 2, Point(50, -50, 60));
+  smoothTo(zero);
+
+  
+  for (int i = 0; i < 6; i++)
+    legs[i].detach();
 
 } 
  

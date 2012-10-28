@@ -10,6 +10,7 @@
 #define rad2deg(x) ( (180.0 / PI) * (x) )
 #define deg2rad(x) ( (PI / 180.0) * (x) )
 #define fabs(x) ((x) >= 0 ? (x) : - (x))
+#define max(x, y) ((x) > (y) ? (x) : (y))
 
 #define DONT_MOVE 123456.123456
 
@@ -63,7 +64,23 @@ struct Point
     
     Point operator+(Point& that)
     {
-        return Point(x + that.x, y + that.y, z + that.z);
+        return Point(x + that.x, 
+                     y + that.y, 
+                     z + that.z);
+    }
+
+    Point operator-(Point& that)
+    {
+        return Point(x - that.x, 
+                     y - that.y, 
+                     z - that.z);
+    }
+
+    Point operator*(float m)
+    {
+        return Point(x * m, 
+                     y * m, 
+                     z * m);
     }
     
     void operator=(Point& that)
@@ -72,6 +89,30 @@ struct Point
         y = that.y;
         z = that.z;
     }
+
+    // Workaround for an gccavr issue with reference args
+    void assign(Point that)
+    {
+        x = that.x;
+        y = that.y;
+        z = that.z;
+    }
+    
+    void assign(float _x, float _y, float _z)
+    {
+        x = _x;
+        y = _y;
+        z = _z;
+    }
+
+    float maxDistance(Point& that)
+    {
+        float dx = fabs(x - that.x);
+        float dy = fabs(y - that.y);
+        float dz = fabs(z - that.z);
+        
+        return max(dz, max(dx, dy));
+    }    
 };
 
 class Leg
@@ -101,9 +142,25 @@ public:
         if (_debug)
             return;
         
-        _cServo.attach(coxaPin);
-        _fServo.attach(femurPin);
-        _tServo.attach(tibiaPin);
+        _coxaPin = coxaPin;
+        _femurPin = femurPin;
+        _tibiaPin = tibiaPin;
+        
+        attach();
+    }
+
+    void attach()
+    {
+        _cServo.attach(_coxaPin);
+        _fServo.attach(_femurPin);
+        _tServo.attach(_tibiaPin);
+    }
+    
+    void detach()
+    {
+        _cServo.detach();
+        _fServo.detach();
+        _tServo.detach();
     }
     
     void configureCoxa(float cStartX, 
@@ -160,7 +217,7 @@ public:
         move(0, 0, 0);
     }
     
-    bool reach(Point dest)
+    bool reach(Point& dest)
     {
         float hDist = sqrt( sqr(dest.x - _cStart.x) +  sqr(dest.y - _cStart.y) );
         float additionalCoxaAngle = hDist == 0.0 ? DONT_MOVE 
@@ -212,15 +269,43 @@ public:
         move(cAngle, fAngle, tAngle);
     }
 
-    void configureDefaultReach(Point def)
+    // Can't use reference argument here due to limitations in gcc avr
+    void configureDefault(Point def, bool move)
     {
-        _defaultReach = def;
+        _defaultPos = def;
+        _currentPos = def;
+        
+        if (move)
+            reach(def);
     }
     
-    void reachRelative(Point dest)
+    void reachRelativeToDefault(Point& dest)
     {
-        reach(_defaultReach + dest);
+        _currentPos.assign(_defaultPos + dest);
+        reach(_currentPos);
     }
+    
+    void reachRelativeToCurrent(Point& dest)
+    {
+        _currentPos.assign(_currentPos + dest);
+        reach(_currentPos);
+    }
+    
+    Point getCurrentRelative()
+    {
+        return _currentPos - _defaultPos;
+    }
+    
+    Point& getCurrentPos()
+    {
+        return _currentPos;
+    }
+    
+    Point& getDefaultPos()
+    {
+        return _defaultPos;
+    }
+    
 
 private:
     
@@ -308,9 +393,14 @@ private:
     float _tServoDirection;
     float _tStartAngle;
   
-    Point _defaultReach;  
+    Point _defaultPos;  
+    Point _currentPos;
     bool _attached;
     bool _thirdQuarterFix;
+  
+    int _coxaPin;
+    int _femurPin;
+    int _tibiaPin;
   
     // Servos
     Servo _cServo;
