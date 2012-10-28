@@ -227,19 +227,22 @@ public:
         
         float cAngle = hDist == 0.0 ? DONT_MOVE 
                                     : primaryCoxaAngle - additionalCoxaAngle - _cStartAngle;
-                                    
+
         // Moving to local Coxa-Femur-target coordinate system
+        // Note the case when hDist <= _cFemurOffset. This is for the blind zone.
+        // We never can't reach the point that is nearer to the _cStart then
+        // femur offset (_fStartFarOffset)
         float localDestX = hDist <= _cFemurOffset 
             ? - _fStartFarOffset
             : sqrt(sqr(hDist) - sqr(_cFemurOffset)) - _fStartFarOffset;
 
         float localDestY = dest.z - _fStartZOffset;
-        
+
         // Check reachability
         float localDistSqr = sqr(localDestX) + sqr(localDestY);
         if (localDistSqr > sqr(_fLength + _tLenght))
         {
-            log("Cant reach!");
+            log("Can't reach!");
             return false;
         }
         
