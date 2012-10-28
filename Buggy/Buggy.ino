@@ -26,7 +26,7 @@ void walk(Leg* legs, int iterations, Point direction)
 {
     for (int i = 0; i < iterations; i++)
     {
-        for(float p = 0; p <= 2; p += 0.02)
+        for(float p = 0; p <= 2; p += 0.025)
         {
             float progress; 
             float height1;
@@ -83,7 +83,7 @@ void smoothTo(Point& to, int legGroup)
     for (int i = legGroup; i < N; i += 2)
         relative[i].assign((legs[i].getDefaultPos() + to) - legs[i].getCurrentPos());
   
-    for(float p = 0; p <= 1; p += 0.02)
+    for(float p = 0; p <= 1; p += 0.05)
     {
         for (int li = legGroup; li < N; li += 2)
         {
@@ -135,30 +135,35 @@ void configureLegs()
     rightLegs[2].configureCoxa( 34, -65, deg2rad(-         63),  10);                        
     leftLegs [2].configureCoxa(-34, -65, deg2rad(- (180 - 63)), -10);
 
-    rightLegs[0].configureDefault(Point( 84, 130, -70), true);
-    leftLegs [0].configureDefault(Point(-84, 130, -70), true);
+    rightLegs[0].configureDefault(Point( 94, 120, -70), true);
+    leftLegs [0].configureDefault(Point(-94, 120, -70), true);
   
-    rightLegs[1].configureDefault(Point( 120, 30, -70), true);
-    leftLegs [1].configureDefault(Point(-120, 30, -70), true);
+    rightLegs[1].configureDefault(Point( 120, 00, -70), true);
+    leftLegs [1].configureDefault(Point(-120, 00, -70), true);
 
-    rightLegs[2].configureDefault(Point( 94, -80, -70), true);
-    leftLegs [2].configureDefault(Point(-94, -80, -70), true);
+    rightLegs[2].configureDefault(Point( 94, -110, -70), true);
+    leftLegs [2].configureDefault(Point(-94, -110, -70), true);
     
     // Fine tuning
-/*    rightLegs[0].tuneRestAngles(PI / 2,
+    rightLegs[0].tuneRestAngles(PI / 2,
                                 PI / 2 + deg2rad(10),
                                 PI / 2);
     leftLegs[0].tuneRestAngles(PI / 2,
-                                PI / 2 + deg2rad(10),
+                                PI / 2 - deg2rad(5),
                                 PI / 2);
-*/
+
     leftLegs[1].tuneRestAngles(PI / 2,
                                 PI / 2,
                                 PI / 2 - deg2rad(10));
 
     rightLegs[1].tuneRestAngles(PI / 2,
                                 PI / 2,
-                                PI / 2 + deg2rad(10));
+                                PI / 2 + deg2rad(20));
+
+
+    leftLegs[2].tuneRestAngles(PI / 2,
+                                PI / 2 - deg2rad(10),
+                                PI / 2);
     
     for (Leg* leg = legs; leg < legs + 6; leg++)
         leg->reachRelativeToDefault(zero);
@@ -192,10 +197,17 @@ void setup()
   }*/
   
 
-  walk(legs, 2, Point(50, 50, 60));
-  walk(legs, 2, Point(-50, 50, 60));
-  walk(legs, 2, Point(-50, -50, 60));
-  walk(legs, 2, Point(50, -50, 60));
+  walk(legs, 4, Point(0, 80, 50));
+  walk(legs, 4, Point(-70, 0, 50));
+  walk(legs, 4, Point(0, -80, 50));
+  walk(legs, 4, Point(70, 0, 50));
+
+  walk(legs, 2, Point(60, 60, 50));
+  walk(legs, 2, Point(-60, 60, 50));
+  walk(legs, 2, Point(-60, -60, 50));
+  walk(legs, 2, Point(60, -60, 50));
+
+
   smoothTo(zero);
 
   
