@@ -215,8 +215,54 @@ public:
         move(0, 0, 0);
     }
     
+    // Can't use reference argument here due to limitations in gcc avr
+    void configureDefault(Point def, bool move)
+    {
+        _defaultPos = def;
+        _currentPos = def;
+        
+        if (move)
+            reach(def);
+    }
+    
+    void reachRelativeToDefault(Point& dest)
+    {
+        _currentPos.assign(_defaultPos + dest);
+        reach(_currentPos);
+    }
+    
+    void reachRelativeToCurrent(Point& dest)
+    {
+        _currentPos.assign(_currentPos + dest);
+        reach(_currentPos);
+    }
+    
+    void reachAbsolute(Point& dest)
+    {
+        _currentPos = dest;
+        reach(_currentPos);
+    }
+    
+    Point getCurrentRelative()
+    {
+        return _currentPos - _defaultPos;
+    }
+    
+    Point& getCurrentPos()
+    {
+        return _currentPos;
+    }
+    
+    Point& getDefaultPos()
+    {
+        return _defaultPos;
+    }
+    
+private:
+
     bool reach(Point& dest)
     {
+        
         float hDist = sqrt( sqr(dest.x - _cStart.x) +  sqr(dest.y - _cStart.y) );
         float additionalCoxaAngle = hDist == 0.0 ? DONT_MOVE 
                                                  : asin( _cFemurOffset / hDist );
@@ -269,47 +315,7 @@ public:
 
         move(cAngle, fAngle, tAngle);
     }
-
-    // Can't use reference argument here due to limitations in gcc avr
-    void configureDefault(Point def, bool move)
-    {
-        _defaultPos = def;
-        _currentPos = def;
         
-        if (move)
-            reach(def);
-    }
-    
-    void reachRelativeToDefault(Point& dest)
-    {
-        _currentPos.assign(_defaultPos + dest);
-        reach(_currentPos);
-    }
-    
-    void reachRelativeToCurrent(Point& dest)
-    {
-        _currentPos.assign(_currentPos + dest);
-        reach(_currentPos);
-    }
-    
-    Point getCurrentRelative()
-    {
-        return _currentPos - _defaultPos;
-    }
-    
-    Point& getCurrentPos()
-    {
-        return _currentPos;
-    }
-    
-    Point& getDefaultPos()
-    {
-        return _defaultPos;
-    }
-    
-
-private:
-    
     void move(float cAngle, float fAngle, float tAngle)
     {
 //        if (_cServoDirection == 0.0 || _fServoDirection == 0.0 || _tServoDirection == 0.0)

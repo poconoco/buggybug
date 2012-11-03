@@ -18,6 +18,8 @@ void processState()
         legs[i].reachRelativeToCurrent(stateLinearMovement);
 }
 
+
+
 float walk(int steps, Point direction, float startProgress, bool (*pContinue)() = NULL)
 {
     float p = startProgress;
@@ -48,16 +50,13 @@ float walk(int steps, Point direction, float startProgress, bool (*pContinue)() 
                          - direction.y / 2 + progress * direction.y,
                          height2);
 
-
             if (legs[0].getCurrentRelative().maxDistance(group1) > 10)
                 smoothTo(group1, 0);
-            if (legs[1].getCurrentRelative().maxDistance(group2) > 5)
+            if (legs[1].getCurrentRelative().maxDistance(group2) > 10)
                 smoothTo(group2, 1);
                     
             for (int li = 0; li < N; li+=2)
             {
-                    
-              
                 legs[li].reachRelativeToDefault(group1);                  
                 legs[li + 1].reachRelativeToDefault(group2);                  
             }
@@ -76,6 +75,76 @@ float walk(int steps, Point direction, float startProgress, bool (*pContinue)() 
     return p;
 }
 
+float rotate(int steps, float clockwise, float startProgress, bool (*pContinue)() = NULL)
+{
+    float p = startProgress;
+    for (int i = 0; i < steps; i++)
+    {
+        for(; p <= 2; /*p += 0.025*/)
+        {
+            float progress; 
+            float h[2]; // height
+            float s[2]; // sine
+            float c[2]; // cosine
+            const float angle = clockwise * (PI / 500);
+
+            if (p < 1) 
+            {
+                progress = p;
+                h[0] = 0;
+                h[1] = 50 * (0.5 - fabs(0.5 - p));
+                s[0] = sin(angle);
+                c[0] = cos(angle);
+                s[1] = sin(- angle);
+                c[1] = cos(- angle);
+            }
+            else 
+            {
+                progress = 1 - (p - 1);
+                h[0] = 50 * (0.5 - fabs(1.5 - p));
+                h[1] = 0;
+                s[0] = sin(- angle);
+                c[0] = cos(- angle);
+                s[1] = sin(angle);
+                c[1] = cos(angle);
+            }
+
+            for (int li = 0; li < N; ++li)
+            {    
+                // li - leg index, gi - group index
+                int gi = li % 2;
+                Point pNew;
+                Point pCurr = legs[li].getCurrentPos();
+              
+                pNew.x = pCurr.x * c[gi] - pCurr.y * s[gi];
+                pNew.y = pCurr.x * s[gi] + pCurr.y * c[gi];
+              
+                // Calc default pos
+                pNew.x -= legs[li].getDefaultPos().x;
+                pNew.y -= legs[li].getDefaultPos().y;
+                pNew.z = h[gi];
+
+//                if (legs[li].getCurrentRelative().maxDistance(pNew) > 10)
+  //                  smoothTo(pNew, gi);
+                  
+                legs[li].reachRelativeToDefault(pNew);
+            }
+
+            delay(1);
+            if (pContinue != NULL && ! pContinue())
+                return p;
+                
+            p += 0.025 /*+ 0.00 * (0.5 - fabs(0.5 - progress))*/;
+        }
+
+        if (p > 2)
+            p = 0;        
+    }
+    
+    return p;
+}
+
+
 void smoothTo(Point& to)
 {
     smoothTo(to, 0);
@@ -86,17 +155,21 @@ void smoothTo(Point& to)
 void smoothTo(Point& to, int legGroup)
 {
     Point relative[N];
+    Point currentPositions[N];
     for (int i = legGroup; i < N; i += 2)
+    {
+        currentPositions[i] = legs[i].getCurrentPos();
         relative[i].assign((legs[i].getDefaultPos() + to) - legs[i].getCurrentPos());
+    }
   
     for(float p = 0; p <= 1; p += 0.03)
     {
         for (int li = legGroup; li < N; li += 2)
         {
             Point currSubStep = relative[li] * p;
-            Point currStep = legs[li].getCurrentPos() + currSubStep;
+            Point currStep = currentPositions[li] + currSubStep;
             currStep.z = legs[li].getDefaultPos().z + to.z + 50 * (0.5 - fabs(0.5 - p));
-            legs[li].reach(currStep);
+            legs[li].reachAbsolute(currStep);
         }
         
         delay(5);
@@ -270,9 +343,16 @@ bool checkDirection()
     while (Serial.available() > 0)
         incoming = Serial.read();
 
+    // One shot actions
     if (incoming == ' ')
     {
         attachChange();
+        return false;
+    }
+    else if (incoming == 'z')
+    {
+        smoothTo(zero);
+        progress = 0;
         return false;
     }
 
@@ -312,6 +392,12 @@ void loop()
             break;
         case 'd':
             progress = walk(1, Point(70, 0, 50), progress, checkDirection);
+            break;
+        case 'e':
+            progress = rotate(1, 1.0, progress, checkDirection);
+            break;
+        case 'q':
+            progress = rotate(1, -1.0, progress, checkDirection);
             break;
     }
 } 
