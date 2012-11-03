@@ -3,7 +3,6 @@
 
 #include <math.h>
 #include <Servo.h>
-// #include "WProgram.h"
 
 #define sqr(x) ((x)*(x))
 #define PI 3.141592653589793238
@@ -13,14 +12,6 @@
 #define max(x, y) ((x) > (y) ? (x) : (y))
 
 #define DONT_MOVE 123456.123456
-
-void log(const char* x);
-void log(const char* x, int a);
-void log(const char* x, float a);
-void log(const char* x, float a, float b);
-void log(const char* x, float a, float b, float c);
-void log(int x);
-void log(float x);
 
 float polarAngle(float x, float y, bool thirdQuarterFix)
 {
@@ -136,9 +127,7 @@ public:
     }
     
     void attach(int coxaPin, int femurPin, int tibiaPin)
-    {   
-        _attached = true;
-      
+    {         
         if (_debug)
             return;
         
@@ -146,11 +135,16 @@ public:
         _femurPin = femurPin;
         _tibiaPin = tibiaPin;
         
+        detach();
         attach();
     }
 
     void attach()
     {
+        if (_attached)
+            return;      
+      
+        _attached = true;
         _cServo.attach(_coxaPin);
         _fServo.attach(_femurPin);
         _tServo.attach(_tibiaPin);
@@ -158,6 +152,10 @@ public:
     
     void detach()
     {
+        if (! _attached)
+            return;
+      
+        _attached = false;
         _cServo.detach();
         _fServo.detach();
         _tServo.detach();
@@ -242,7 +240,7 @@ public:
         float localDistSqr = sqr(localDestX) + sqr(localDestY);
         if (localDistSqr > sqr(_fLength + _tLenght))
         {
-            log("Can't reach!");
+//            log("Can't reach!");
             return false;
         }
         
@@ -314,8 +312,8 @@ private:
     
     void move(float cAngle, float fAngle, float tAngle)
     {
-        if (_cServoDirection == 0.0 || _fServoDirection == 0.0 || _tServoDirection == 0.0)
-            log("ERROR: Null servo directions detected");
+//        if (_cServoDirection == 0.0 || _fServoDirection == 0.0 || _tServoDirection == 0.0)
+  //          log("ERROR: Null servo directions detected");
       
         if (! _attached)
             return;
@@ -335,10 +333,10 @@ private:
         }
         else
         {
-            log("Angles:");
-            log(mc);
-            log(mf);
-            log(mt);
+//            log("Angles:");
+  //          log(mc);
+    //        log(mf);
+      //      log(mt);
         }
     }
     
@@ -379,22 +377,29 @@ private:
 private:
     bool _debug;
     
+    // 3dof lega have Coxa, Femur and Tibia segments and joints. 
+    // Coxa is nearest to the body, Tibia is farthest.
+    
     // Config
     Point _cStart;             // Coordinates of the Coxa start point
-    float _cServoRestAngle;    // Angle of Coxa servo relax point (usually pi/2)
-    float _cServoDirection;
     float _cStartAngle;        // Angle where Coxa is pointed to when relaxed
     float _cFemurOffset;       // Offset of Femur and Tibia axis from the Coxa axis
     float _fStartZOffset;      // Botton offset of Femur start from the z0 plane
     float _fStartFarOffset;
     float _fLength;            // Femur length
-    float _fServoRestAngle;
-    float _fServoDirection;
     float _fStartAngle;
-    float _tLenght;
-    float _tServoRestAngle;
-    float _tServoDirection;
+    float _tLenght;            // Tibia length
     float _tStartAngle;
+
+    // Servo rest angles are for fine tune of angles. By default it is pi/2 
+    float _cServoRestAngle;
+    float _fServoRestAngle;
+    float _tServoRestAngle;
+
+    // Servo direction should be 1.0 or -1.0 - determines servo orientation
+    float _cServoDirection;
+    float _fServoDirection;
+    float _tServoDirection;
   
     Point _defaultPos;  
     Point _currentPos;

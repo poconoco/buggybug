@@ -1,11 +1,6 @@
 #include <Servo.h>
 #include "Leg.h"
 
-// TODO: Remove this temporary goo
-void log(const char* x) { Serial.println(x); }
-void log(float x) { Serial.println(x); }
-void log(int x) { Serial.println(x); }
-
 static Leg legs[6];
 static int N = 6;//sizeof(legs) / sizeof(Leg);
 
@@ -23,11 +18,12 @@ void processState()
         legs[i].reachRelativeToCurrent(stateLinearMovement);
 }
 
-void walk(int steps, Point direction)
+float walk(int steps, Point direction, float startProgress, bool (*pContinue)() = NULL)
 {
+    float p = startProgress;
     for (int i = 0; i < steps; i++)
     {
-        for(float p = 0; p <= 2; p += 0.025)
+        for(; p <= 2; /*p += 0.025*/)
         {
             float progress; 
             float height1;
@@ -67,8 +63,17 @@ void walk(int steps, Point direction)
             }
 
             delay(1);
-        }        
+            if (pContinue != NULL && ! pContinue())
+                return p;
+                
+            p += 0.01 + 0.04 * (0.5 - fabs(0.5 - progress));
+        }
+
+        if (p > 2)
+            p = 0;        
     }
+    
+    return p;
 }
 
 void smoothTo(Point& to)
@@ -84,7 +89,7 @@ void smoothTo(Point& to, int legGroup)
     for (int i = legGroup; i < N; i += 2)
         relative[i].assign((legs[i].getDefaultPos() + to) - legs[i].getCurrentPos());
   
-    for(float p = 0; p <= 1; p += 0.05)
+    for(float p = 0; p <= 1; p += 0.03)
     {
         for (int li = legGroup; li < N; li += 2)
         {
@@ -98,6 +103,40 @@ void smoothTo(Point& to, int legGroup)
     }
 }
 
+static bool attached;
+
+void attachAll()
+{
+    if (attached)
+        return;
+      
+    attached = true;  
+    tone(9, 4000, 200);
+
+    for (int i = 0; i < 6; i++)
+        legs[i].attach();
+}
+
+void detachAll()
+{
+    if (! attached)
+        return;
+    
+    attached = false;
+    tone(9, 2000, 200);
+
+    for (int i = 0; i < 6; i++)
+        legs[i].detach();
+}
+
+bool attachChange()
+{
+    attached ? detachAll()
+             : attachAll();
+             
+    return attached;
+}
+
 void configureLegs()
 {
     rightLegs[0].attach(46, 47, 39);
@@ -107,7 +146,8 @@ void configureLegs()
     leftLegs[0].attach(29, 28, 36);
     leftLegs[1].attach(35, 34, 33);
     leftLegs[2].attach(32, 31, 30);
-
+    
+    attached = true;
 
     rightLegs[0].configureServoDirections(-1, -1,  1, false);
     leftLegs [0].configureServoDirections(-1,  1, -1, false);
@@ -175,7 +215,7 @@ void setup()
 {
     Serial.begin(9600);
   
-    Serial.println("Starting");
+    Serial.println("setup()");
     
     //for (Leg* leg = legs; leg < legs + 6; leg++)
      //   leg->debug(true);
@@ -197,7 +237,7 @@ void setup()
       delay(10);
   }*/
   
-
+/*
   walk(4, Point(0, 80, 50));
   walk(4, Point(-70, 0, 50));
   walk(4, Point(0, -80, 50));
@@ -208,17 +248,70 @@ void setup()
   walk(2, Point(-60, -60, 50));
   walk(2, Point(60, -60, 50));
 
-
   smoothTo(zero);
 
+*/
+
   
-  for (int i = 0; i < 6; i++)
+/*  for (int i = 0; i < 6; i++)
     legs[i].detach();
+*/
 
 } 
  
  
+char direction = 0;
+unsigned long directionTime = 0;
+static float progress = 0; 
+
+bool checkDirection()
+{
+    int incoming = -1;
+    while (Serial.available() > 0)
+        incoming = Serial.read();
+
+    if (incoming == ' ')
+    {
+        attachChange();
+        return false;
+    }
+
+    if (incoming == direction)
+    {
+        directionTime = millis();
+        return true;
+    }
+
+    if (incoming <= 0 &&
+            millis() - directionTime < 300)
+        return true;
+
+    direction = incoming;
+    directionTime = millis();
+        
+    Serial.println("changing direction");
+    tone (9, 8000, 100);
+    return false;
+}
+ 
 void loop() 
 { 
+    checkDirection();
 
+  
+    switch(direction)
+    {
+        case 'w':
+            progress = walk(1, Point(0, 80, 50), progress, checkDirection);
+            break;
+        case 's':
+            progress = walk(1, Point(0, -80, 50), progress, checkDirection);
+            break;
+        case 'a':
+            progress = walk(1, Point(-70, 0, 50), progress, checkDirection);
+            break;
+        case 'd':
+            progress = walk(1, Point(70, 0, 50), progress, checkDirection);
+            break;
+    }
 } 
