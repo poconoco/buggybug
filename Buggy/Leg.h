@@ -359,8 +359,8 @@ private:
 
     int femurLimit(int x)
     {
-        const int fMin = 90 - 45;
-        const int fMax = 90 + 45;
+        const int fMin = 90 - 70;
+        const int fMax = 90 + 70;
       
         if (x < fMin) return fMin;
         if (x > fMax) return fMax;
@@ -370,8 +370,8 @@ private:
 
     int tibiaLimit(int x)
     {
-        const int tMin = 90 - 45;
-        const int tMax = 90 + 45;
+        const int tMin = 90 - 70;
+        const int tMax = 90 + 70;
       
         if (x < tMin) return tMin;
         if (x > tMax) return tMax;
@@ -383,7 +383,7 @@ private:
 private:
     bool _debug;
     
-    // 3dof lega have Coxa, Femur and Tibia segments and joints. 
+    // 3dof leg has Coxa, Femur and Tibia segments and joints.
     // Coxa is nearest to the body, Tibia is farthest.
     
     // Config
@@ -416,7 +416,7 @@ private:
     int _femurPin;
     int _tibiaPin;
   
-    // Servos
+    // Arduino servos
     Servo _cServo;
     Servo _fServo;
     Servo _tServo;
