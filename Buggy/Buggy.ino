@@ -1,24 +1,13 @@
 #include <Servo.h>
 #include "Leg.h"
 
-static Leg legs[6];
-static int N = 6;//sizeof(legs) / sizeof(Leg);
+static const int N = 6;
+static Leg legs[N];
 
 static Leg* rightLegs = legs;
 static Leg* leftLegs = legs + N / 2;
 
 static Point zero(0,0,0);
-
-static Point stateLinearMovement;
-
-void processState()
-{
-    // TODO:
-    for (int i = 0; i < N; ++i)
-        legs[i].reachRelativeToCurrent(stateLinearMovement);
-}
-
-
 
 float walk(int steps, Point direction, float startProgress, bool (*pContinue)() = NULL)
 {
@@ -110,7 +99,7 @@ float rotate(int steps, float clockwise, float startProgress, bool (*pContinue)(
             }
 
             for (int li = 0; li < N; ++li)
-            {    
+            {
                 // li - leg index, gi - group index
                 int gi = li % 2;
                 Point pNew;
@@ -126,7 +115,6 @@ float rotate(int steps, float clockwise, float startProgress, bool (*pContinue)(
 
 //                if (legs[li].getCurrentRelative().maxDistance(pNew) > 10)
   //                  smoothTo(pNew, gi);
-                  
                 legs[li].reachRelativeToDefault(pNew);
             }
 
@@ -138,7 +126,7 @@ float rotate(int steps, float clockwise, float startProgress, bool (*pContinue)(
         }
 
         if (p > 2)
-            p = 0;        
+            p = 0;
     }
     
     return p;
@@ -296,20 +284,6 @@ void setup()
 
     configureLegs();
 
- /* stateLinearMovement.assign(0, -1, 0);
-  for (int i = 0; i < 50; ++i)
-  {
-      processState();
-      delay(20);
-  }
-
-  stateLinearMovement.assign(0, 1, 0);
-  for (int i = 0; i < 50; ++i)
-  {
-      processState();
-      delay(10);
-  }*/
-  
 /*
   walk(4, Point(0, 80, 50));
   walk(4, Point(-70, 0, 50));
@@ -333,11 +307,36 @@ void setup()
 } 
  
  
-char direction = 0;
-unsigned long directionTime = 0;
+char command = 0;
+unsigned long lastCommandTime = 0;
 static float progress = 0; 
 
-bool checkDirection()
+const char* commandToStr(char cmd)
+{
+    switch (cmd)
+    {
+        case 'w':
+            return "forward";
+        case 's':
+            return "backward";
+        case 'a':
+            return "step left";
+        case 'd':
+            return "step right";
+        case 'q':
+            return "rotate left";
+        case 'e':
+            return "rotate right";
+        case ' ':
+            return "engine start/stop";
+        case 'z':
+            return "default legs pos";
+    }
+    
+    return "n/a";
+}
+
+bool processCommands()
 {
     int incoming = -1;
     while (Serial.available() > 0)
@@ -347,57 +346,74 @@ bool checkDirection()
     if (incoming == ' ')
     {
         attachChange();
+        Serial.println(commandToStr(command));
         return false;
     }
     else if (incoming == 'z')
     {
         smoothTo(zero);
+        tone(9, 2000, 100);
+        Serial.println(commandToStr(command));
         progress = 0;
         return false;
     }
 
-    if (incoming == direction)
+    if (incoming == command)
     {
-        directionTime = millis();
+        lastCommandTime = millis();
         return true;
     }
 
     if (incoming <= 0 &&
-            millis() - directionTime < 300)
+            millis() - lastCommandTime < 300)
         return true;
 
-    direction = incoming;
-    directionTime = millis();
-        
-    Serial.println("changing direction");
-    tone (9, 8000, 100);
+    command = incoming;
+    lastCommandTime = millis();
+
+    Serial.println(commandToStr(command));
+
+    tone(9, 8000, 100);
     return false;
 }
  
 void loop() 
 { 
-    checkDirection();
+    processCommands();
 
-  
-    switch(direction)
+
+    static char lastMoveCommand = 0;
+    bool moved = true;
+
+    switch(command)
     {
         case 'w':
-            progress = walk(1, Point(0, 80, 50), progress, checkDirection);
+            progress = walk(1, Point(0, 80, 50), progress, processCommands);
             break;
         case 's':
-            progress = walk(1, Point(0, -80, 50), progress, checkDirection);
+            progress = walk(1, Point(0, -80, 50), progress, processCommands);
             break;
         case 'a':
-            progress = walk(1, Point(-70, 0, 50), progress, checkDirection);
+            progress = walk(1, Point(-70, 0, 50), progress, processCommands);
             break;
         case 'd':
-            progress = walk(1, Point(70, 0, 50), progress, checkDirection);
+            progress = walk(1, Point(70, 0, 50), progress, processCommands);
             break;
         case 'e':
-            progress = rotate(1, 1.0, progress, checkDirection);
+            if (lastMoveCommand != command)
+                smoothTo(zero);
+            progress = rotate(1, 1.0, progress, processCommands);
             break;
         case 'q':
-            progress = rotate(1, -1.0, progress, checkDirection);
+            if (lastMoveCommand != command)
+                smoothTo(zero);
+            progress = rotate(1, -1.0, progress, processCommands);
+            break;
+        default:
+            moved = 0;
             break;
     }
+
+    if (moved)
+        lastMoveCommand = command;
 } 
