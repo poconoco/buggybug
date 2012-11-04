@@ -331,6 +331,10 @@ const char* commandToStr(char cmd)
             return "engine start/stop";
         case 'z':
             return "default legs pos";
+        case 'r':
+            return "body up";
+        case 'f':
+            return "body down";
     }
     
     return "n/a";
@@ -346,26 +350,49 @@ bool processCommands()
     if (incoming == ' ')
     {
         attachChange();
+        
+        command = incoming;
+        lastCommandTime = millis();
         Serial.println(commandToStr(command));
+        
         return false;
     }
     else if (incoming == 'z')
     {
         smoothTo(zero);
         tone(9, 2000, 100);
+        
+        command = incoming;
+        lastCommandTime = millis();
         Serial.println(commandToStr(command));
+        
         progress = 0;
         return false;
     }
+    else if (incoming == 'r' || incoming == 'f')
+    {
+        command = incoming;
+        lastCommandTime = millis();
+        Serial.println(commandToStr(command));
+        
+        for (int i = 0; i < N; ++i)
+        {
+            Point def = legs[i].getDefaultPos(); 
+            def.z = def.z + (incoming == 'r' ? -2 : 2);
+            legs[i].shiftDefault(def);
+        }
+    }
 
+
+    // Command is the same, continuing
     if (incoming == command)
     {
         lastCommandTime = millis();
         return true;
     }
 
-    if (incoming <= 0 &&
-            millis() - lastCommandTime < 300)
+    // Check if continuous command timed out
+    if (incoming <= 0 && millis() - lastCommandTime < 200)
         return true;
 
     command = incoming;

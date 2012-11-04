@@ -225,6 +225,15 @@ public:
             reach(def);
     }
     
+    void shiftDefault(Point& def)
+    {
+        Point delta = def - _defaultPos;
+        _currentPos.assign(_currentPos + delta);
+        _defaultPos = def;
+        
+        reach(_currentPos);
+    }
+    
     void reachRelativeToDefault(Point& dest)
     {
         _currentPos.assign(_defaultPos + dest);
