@@ -1,4 +1,8 @@
-#include <Leg.h>
+#ifndef GAIT_H__
+#define GAIT_H__
+
+#include "Leg.h"
+#include "Geometry.h"
 
 class LegGroup
 {
@@ -15,7 +19,9 @@ public:
         : _legs(legs)
         , _count(count)
         , _state(DOWN)
-    {}
+    {
+        _invCount = 1.0 / (float) _count;
+    }
 
     void setState(State state)
     {
@@ -37,9 +43,15 @@ public:
         return _count;
     }
 
+    float invCount() const
+    {
+        return _invCount;
+    }
+
 private:
     Leg** _legs;
     int _count;
+    float _invCount;
 
     State _state;
 };
@@ -52,7 +64,7 @@ public:
         : _groups(groups)
         , _groupCount(groupCount)
         , _minGroupDown(minGroupDown)
-        , _speed(1.0) // TODO: configurable
+        , _stepSpeed(1.0) // In steps per second // TODO: configurable
         , _gaitHeight(10) // TODO: configurable
         , _raiseFactorThreshold(sqr(15.0)) // TODO: configurable
     {
@@ -86,18 +98,18 @@ public:
         // 1: Move body with legs that are down
         for (int gi = 0; gi < _groupCount; ++gi)
         {
-            if (_groups[i].state() == LegGroup::DOWN)
+            if (_groups[gi].state() == LegGroup::DOWN)
             {
                 ++downCount;
 
-                for (int li = 0; li < _groups[i].count(); ++li)
+                for (int li = 0; li < _groups[gi].count(); ++li)
                 {
                     // TODO: radial movement
-                    Point relMove;
-                    relMove.x = (- _movement.x / 1000.0) * deltaT;
-                    relMove.y = (- _movement.y / 1000.0) * deltaT;
-                    relMove.z = 0;
-                    _groups[i].legs()[li]->reachRelativeToCurrent(relMove);
+                    Point nextRel;
+                    nextRel.x = (- _movement.x / 1000.0) * _stepSpeed * deltaT;
+                    nextRel.y = (- _movement.y / 1000.0) * _stepSpeed * deltaT;
+                    nextRel.z = 0;
+                    _groups[gi].legs()[li]->reachRelativeToCurrent(nextRel);
                 }
             }
         }
@@ -111,9 +123,9 @@ public:
             float bestFactor = 0;
             for (int gi = 0; gi < _groupCount; ++gi)
             {
-                if (_groups[i].state() == LegGroup::DOWN)
+                if (_groups[gi].state() == LegGroup::DOWN)
                 {
-                    float factor = calcRaiseFactorForGroup(_groups[i]);
+                    float factor = calcRaiseFactorForGroup(_groups[gi]);
                     if (factor > bestFactor)
                     {
                         bestFactor = factor;
@@ -129,7 +141,23 @@ public:
         }
 
         // 3: Move leg groups that are raised, put down if needed
-        // TODO:
+        for (int gi = 0; gi < _groupCount; ++gi)
+        {
+            if (_groups[i].state() != LegGroup::DOWN)
+            {
+                for (int li = 0; li < _groups[gi].count(); ++li)
+                {
+                    Leg* leg = _groups[gi].legs()[li];
+                    Point& def = leg->getDefaultPos();
+                    Point currRel = leg->getCurrentRelative();
+                    float sqrDefToNextStep = sqr(_movement.x) + sqr(_movement.y);
+                    float sqrCurrToNextStep = distanceSqr2D(currRel.x, currRel.y, _movement.x, _movement.y);
+
+                    Point nextRel;
+                    // TODO: continue from here
+                }
+            }
+        }
 
         _lastTickTime = now;
     }
@@ -141,16 +169,17 @@ private:
     float calcRaiseFactorForGroup(LegGroup& group)
     {
         // TODO: radial movement
-        float sumDistance = 0.0;
+
+        // Using square distance to spare square root calculation
+        float sumSqrDistance = 0.0;
         for (Leg* leg = group.legs(), int i = 0; i < group.count(); i++, leg++)
         {
             Point currLegPos = leg->getCurrentRelative();
-            sumDistance +=
-                sqr(currLegPos.x - _movement.x) +
-                sqr(currLegPos.y - _movement.y);
+            sumSqrDistance += distanceSqr2D(currLegPos.x, currLegPos.y, _movement.x, _movement.y);
         }
 
-        return sumDistance / group.count();
+        // Use invCount to spare divide operation in favor of multiply
+        return sumSqrDistance * group.invCount();
     }
 
 private:
@@ -165,3 +194,5 @@ private:
 
     unsigned long _lastTickTime;
 };
+
+#endif
