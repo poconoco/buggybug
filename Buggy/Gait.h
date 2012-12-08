@@ -1,6 +1,8 @@
 #ifndef GAIT_H__
 #define GAIT_H__
 
+#include <Arduino.h>
+
 #include "Leg.h"
 #include "Geometry.h"
 
@@ -11,8 +13,7 @@ public:
     enum State
     {
         DOWN,
-        RAISING,
-        LOWERING
+        UP,
     };
 
     LegGroup(Leg** legs, int count)
@@ -66,7 +67,8 @@ public:
         , _minGroupDown(minGroupDown)
         , _stepSpeed(1.0) // In steps per second // TODO: configurable
         , _gaitHeight(10) // TODO: configurable
-        , _raiseFactorThreshold(sqr(15.0)) // TODO: configurable
+        , _raiseFactorThreshold(sqr(20.0)) // TODO: configurable
+        , _putDownDistanceThreshold(5.0) // TODO: configurable
     {
         _lastTickTime = millis();
     }
@@ -86,6 +88,7 @@ public:
     void updateMovementDirect(Point& movement)
     {
         _movement = movement;
+        _movement.z = 0;
     }
 
     void tick()
@@ -136,26 +139,53 @@ public:
 
             if (bestFactor > _raiseFactorThreshold)
             {
-                _groups[bestGi].setState(LegGroup.RAISING);
+                _groups[bestGi].setState(LegGroup::UP);
             }
         }
 
         // 3: Move leg groups that are raised, put down if needed
         for (int gi = 0; gi < _groupCount; ++gi)
         {
-            if (_groups[i].state() != LegGroup::DOWN)
+            if (_groups[gi].state() != LegGroup::DOWN)
             {
+                int downCount = 0;
+
                 for (int li = 0; li < _groups[gi].count(); ++li)
                 {
                     Leg* leg = _groups[gi].legs()[li];
                     Point& def = leg->getDefaultPos();
                     Point currRel = leg->getCurrentRelative();
-                    float sqrDefToNextStep = sqr(_movement.x) + sqr(_movement.y);
-                    float sqrCurrToNextStep = distanceSqr2D(currRel.x, currRel.y, _movement.x, _movement.y);
 
+                    float defToNextStep = sqrt(sqr(_movement.x) + sqr(_movement.y));
+                    float currToNextStep = distance2D(currRel.x, currRel.y, _movement.x, _movement.y);
+
+                    if (currToNextStep < _putDownDistanceThreshold)
+                    {
+                        _groups[gi].legs()[li]->reachRelativeToDefault(_movement);
+                        ++downCount;
+                        break;
+                    }
+
+                    float progress = defToNextStep / currToNextStep;
+
+                    Point upMovement;
+                    upMovement.x = _movement.x - currRel.x;
+                    upMovement.y = _movement.y - currRel.y;
+                    upMovement.z = (0.5 - abs(0.5 - progress)) * 2 * _gaitHeight - currRel.z;
+
+                    // Normalize upMovement to have defToNextStep length
+                    normalize(upMovement, defToNextStep / currToNextStep);
+                    
                     Point nextRel;
-                    // TODO: continue from here
+                    nextRel.z = (upMovement.z / 1000.0) * _stepSpeed * deltaT;
+                    nextRel.x = (upMovement.x / 1000.0) * _stepSpeed * deltaT;
+                    nextRel.y = (upMovement.y / 1000.0) * _stepSpeed * deltaT;
+
+                    _groups[gi].legs()[li]->reachRelativeToCurrent(nextRel);
                 }
+
+                if (downCount == _groups[gi].count())
+                    _groups[gi].setState(LegGroup::DOWN);
             }
         }
 
@@ -166,13 +196,14 @@ private:
 
     // The bigger returned number, the more likely this group should be raised to move
     // In fact, it's average of square of distance from next step point of each leg to the current pos
-    float calcRaiseFactorForGroup(LegGroup& group)
+    float calcRaiseFactorForGroup(const LegGroup& group) const
     {
         // TODO: radial movement
 
         // Using square distance to spare square root calculation
         float sumSqrDistance = 0.0;
-        for (Leg* leg = group.legs(), int i = 0; i < group.count(); i++, leg++)
+        int i = 0;
+        for (Leg* leg = *group.legs(); i < group.count(); i++, leg++)
         {
             Point currLegPos = leg->getCurrentRelative();
             sumSqrDistance += distanceSqr2D(currLegPos.x, currLegPos.y, _movement.x, _movement.y);
@@ -183,14 +214,15 @@ private:
     }
 
 private:
-    const LegGroup* _groups;
+    LegGroup* _groups;
     const int _groupCount;
     const int _minGroupDown;
 
     Point _movement;
-    float _speed;
+    float _stepSpeed;
     float _gaitHeight;
-    float _raiseFactorThreshold;
+    float const _raiseFactorThreshold;
+    float const _putDownDistanceThreshold;
 
     unsigned long _lastTickTime;
 };
