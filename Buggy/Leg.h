@@ -165,6 +165,16 @@ public:
         return _defaultPos;
     }
     
+    void rememberRaisePoint()
+    {
+        _raisePoint = _currentPos;
+    }
+    
+    Point& getRaisePoint()
+    {
+        return _raisePoint;
+    }
+    
 private:
 
     bool reach(Point& dest)
@@ -314,6 +324,7 @@ private:
     float _fServoDirection;
     float _tServoDirection;
   
+    Point _raisePoint;
     Point _defaultPos;  
     Point _currentPos;
     bool _attached;

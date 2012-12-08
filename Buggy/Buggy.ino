@@ -186,22 +186,31 @@ void loop()
     processCommands();
 
     static char lastMoveCommand = 0;
+    static char lastCommand = 0;
     bool moved = true;
     const char currCommand = command;
     
     switch(currCommand)
     {
         case 'w':
-            progress = moveSimple.walk(1, Point(0, 80, 50), progress, processCommands);
+            //progress = moveSimple.walk(1, Point(0, 80, 50), progress, processCommands);
+            if (lastCommand != command)
+                moveGait.updateMovementDirect(Point(0, 20, 0));
             break;
         case 's':
-            progress = moveSimple.walk(1, Point(0, -80, 50), progress, processCommands);
+            //progress = moveSimple.walk(1, Point(0, -80, 50), progress, processCommands);
+            if (lastCommand != command)
+                moveGait.updateMovementDirect(Point(0, -20, 0));
             break;
         case 'a':
-            progress = moveSimple.walk(1, Point(-70, 0, 50), progress, processCommands);
+            //progress = moveSimple.walk(1, Point(-70, 0, 50), progress, processCommands);
+            if (lastCommand != command)
+                moveGait.updateMovementDirect(Point(-20, 0, 0));
             break;
         case 'd':
-            progress = moveSimple.walk(1, Point(70, 0, 50), progress, processCommands);
+            //progress = moveSimple.walk(1, Point(70, 0, 50), progress, processCommands);
+            if (lastCommand != command)
+                moveGait.updateMovementDirect(Point(20, 0, 0));
             break;
         case 'e':
             if (lastMoveCommand != command)
@@ -215,8 +224,13 @@ void loop()
             break;
         default:
             moved = false;
+            moveGait.stop();
     }
 
+    lastCommand = currCommand;
     if (moved)
         lastMoveCommand = currCommand;
+        
+    delay(10);
+    moveGait.tick();
 } 
