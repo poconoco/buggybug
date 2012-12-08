@@ -105,4 +105,11 @@ struct Point
     }
 };
 
+void normalize(Point& vector, float normalizer)
+{
+    vector.x = vector.x * normalizer;
+    vector.y = vector.y * normalizer;
+    vector.z = vector.z * normalizer;
+}
+
 #endif

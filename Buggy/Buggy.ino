@@ -1,6 +1,7 @@
 #include <Servo.h>
 
 #include "Leg.h"
+#include "Gait.h"
 
 static const int N = 6;
 static Leg legs[N];
