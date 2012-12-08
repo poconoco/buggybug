@@ -27,7 +27,7 @@ public:
         _debug = on;
     }
     
-    void attach(int coxaPin, int femurPin, int tibiaPin)
+    void setPins(int coxaPin, int femurPin, int tibiaPin)
     {         
         if (_debug)
             return;
@@ -35,9 +35,6 @@ public:
         _coxaPin = coxaPin;
         _femurPin = femurPin;
         _tibiaPin = tibiaPin;
-        
-        detach();
-        attach();
     }
 
     void attach()
@@ -331,6 +328,8 @@ private:
     Servo _fServo;
     Servo _tServo;
 };
+
+typedef Leg* PLeg;
 
 #endif
 
