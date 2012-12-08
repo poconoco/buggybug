@@ -103,13 +103,19 @@ struct Point
 
         return max(dz, max(dx, dy));
     }
+    
+    float distance(Point& that)
+    {
+        return sqrt(sqr(x - that.x) + sqr(y - that.y) + sqr(z - that.z));
+    }
+    
 };
 
-void normalize(Point& vector, float normalizer)
+void normalize2D(Point& vector, float normalizer)
 {
     vector.x = vector.x * normalizer;
     vector.y = vector.y * normalizer;
-    vector.z = vector.z * normalizer;
+//    vector.z = vector.z * normalizer;
 }
 
 #endif
