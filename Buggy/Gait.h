@@ -214,7 +214,7 @@ private:
     }
 
 private:
-    LegGroup* _groups;
+    LegGroup _groups;
     const int _groupCount;
     const int _minGroupDown;
 
