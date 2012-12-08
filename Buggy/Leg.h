@@ -167,7 +167,7 @@ public:
     
     void rememberRaisePoint()
     {
-        _raisePoint = _currentPos;
+        _raisePoint.assign(getCurrentRelative());
     }
     
     Point& getRaisePoint()
@@ -220,9 +220,10 @@ private:
         bx = X0 - B * mult;
         ay = Y0 - A * mult;
         by = Y0 + A * mult;
+
         // Select solution on top as joint
-        float jointLocalX = (ax > bx) ? ax : bx;
-        float jointLocalY = (ax > bx) ? ay : by;
+        float jointLocalX = ax;
+        float jointLocalY = ay;
         
         float primaryFemurAngle = polarAngle(jointLocalX, jointLocalY, false);
         float fAngle = primaryFemurAngle - _fStartAngle;
@@ -265,8 +266,8 @@ private:
     
     int coxaLimit(int x)
     {
-        const int cMin = 90 - 45;
-        const int cMax = 90 + 45;
+        const int cMin = 90 - 70;
+        const int cMax = 90 + 70;
       
         if (x < cMin) return cMin;
         if (x > cMax) return cMax;

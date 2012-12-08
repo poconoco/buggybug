@@ -46,14 +46,14 @@ public:
         rightLegs[2].configureCoxa( 34, -65, deg2rad(-         63),  10);                        
         leftLegs [2].configureCoxa(-34, -65, deg2rad(- (180 - 63)), -10);
     
-        rightLegs[0].configureDefault(Point( 94, 120, -70), true);
-        leftLegs [0].configureDefault(Point(-94, 120, -70), true);
+        rightLegs[0].configureDefault(Point( 90, 110, -70), true);
+        leftLegs [0].configureDefault(Point(-90, 110, -70), true);
       
-        rightLegs[1].configureDefault(Point( 120, 00, -70), true);
-        leftLegs [1].configureDefault(Point(-120, 00, -70), true);
+        rightLegs[1].configureDefault(Point( 130, 00, -70), true);
+        leftLegs [1].configureDefault(Point(-130, 00, -70), true);
     
-        rightLegs[2].configureDefault(Point( 94, -110, -70), true);
-        leftLegs [2].configureDefault(Point(-94, -110, -70), true);
+        rightLegs[2].configureDefault(Point( 80, -130, -70), true);
+        leftLegs [2].configureDefault(Point(-80, -130, -70), true);
         
         // Fine tuning
         rightLegs[0].tuneRestAngles(PI / 2,

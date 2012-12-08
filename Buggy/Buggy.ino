@@ -231,6 +231,6 @@ void loop()
     if (moved)
         lastMoveCommand = currCommand;
         
-    delay(10);
+    delay(2);
     moveGait.tick();
 } 

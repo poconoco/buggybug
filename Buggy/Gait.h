@@ -17,7 +17,7 @@ public:
         UP,
     };
 
-    LegGroup(Leg** legs, int count)
+    LegGroup(PLeg* legs, int count)
         : _legs(legs)
         , _count(count)
         , _state(DOWN)
@@ -28,8 +28,9 @@ public:
     void setState(State state)
     {
         _state = state;
+
         if (state == UP)
-            for (Leg** leg = legs(); leg < legs() + count(); leg++)
+            for (PLeg* leg = legs(); leg < legs() + count(); ++leg)
                 (*leg)->rememberRaisePoint();
     }
 
@@ -38,7 +39,7 @@ public:
         return _state;
     }
 
-    Leg** legs() const
+    PLeg* legs() const
     {
         return _legs;
     }
@@ -54,7 +55,7 @@ public:
     }
 
 private:
-    Leg** _legs;
+    PLeg* _legs;
     
     int _count;
     float _invCount;
@@ -70,13 +71,11 @@ public:
         : _groups(groups)
         , _groupCount(groupCount)
         , _minGroupDown(minGroupDown)
-        , _stepSpeedDown(1.0) // In steps per second // TODO: configurable
-        , _stepSpeedUp(2.0) // In steps per second // TODO: configurable
-        , _gaitHeight(50) // TODO: configurable
-        , _raiseFactorThreshold(sqr(10.0)) // TODO: configurable
-        , _putDownDistanceThreshold(2.0) // TODO: configurable
+        , _gaitHeight(25) // TODO: configurable
+        , _putDownDistanceThreshold(0.5) // TODO: configurable
     {
         _lastTickTime = millis();
+        setSpeed(3.0);
     }
 
     void updateMovementForce(Point& force)
@@ -89,12 +88,21 @@ public:
         // TODO
     }
 
+    void setSpeed(float speed)
+    {
+        _stepSpeedUp = speed;
+        _stepSpeedDown = _stepSpeedUp * 1.2;
+        
+    }
+
     // TODO make this protected and use only updateMovementForce() instead
     // x and y are speed in millimeters per second
     void updateMovementDirect(Point movement)
     {
         _movement = movement;
         _movement.z = 0;
+        
+        _raiseFactorThreshold = distance2D(0, 0, _movement.x, _movement.y) * 1.2;
     }
     
     void stop()
@@ -109,14 +117,14 @@ public:
         const unsigned long now = millis();
         const unsigned long deltaT = now - _lastTickTime;
 
-        int downCount = 0;
+        int downGroupCount = 0;
 
         // 1: Move body with legs that are down
         for (int gi = 0; gi < _groupCount; ++gi)
         {
             if (_groups[gi].state() == LegGroup::DOWN)
             {
-                ++downCount;
+                ++downGroupCount;
 
                 for (int li = 0; li < _groups[gi].count(); ++li)
                 {
@@ -132,7 +140,7 @@ public:
 
         // 2: Decide what leg groups should be raised (one group at a tick)
         // TODO: implement minimum raise interval
-        if (downCount > _minGroupDown)
+        if (downGroupCount > _minGroupDown)
         {
             // Find most recommended leg group for raising
             int bestGi = -1;
@@ -151,9 +159,7 @@ public:
             }
 
             if (bestFactor > _raiseFactorThreshold)
-            {
                 _groups[bestGi].setState(LegGroup::UP);
-            }
         }
 
         // 3: Move leg groups that are raised, put down if needed
@@ -161,50 +167,64 @@ public:
         {
             if (_groups[gi].state() != LegGroup::DOWN)
             {
-                int downCount = 0;
+                int downLegCount = 0;
 
                 for (int li = 0; li < _groups[gi].count(); ++li)
                 {
                     Leg* leg = _groups[gi].legs()[li];
                     Point currRel = leg->getCurrentRelative();
+                    Point& raisedAt = leg->getRaisePoint();
 
-                    // TODO: continue here - use remembered raise points
-                    float defToNextStep = sqrt(sqr(_movement.x) + sqr(_movement.y));
+                    float fullToNextStep = distance2D(raisedAt.x, raisedAt.y, _movement.x, _movement.y);
                     float currToNextStep = distance2D(currRel.x, currRel.y, _movement.x, _movement.y);
+
+//                    float fullToNextStep = _movement.distance(raisedAt);
+//                    float currToNextStep = _movement.distance(currRel);
 
                     if (currToNextStep < _putDownDistanceThreshold)
                     {
                         _groups[gi].legs()[li]->reachRelativeToDefault(_movement);
-                        ++downCount;
-                        break;
+                        ++downLegCount;
+                        continue;
                     }
 
-                    float progress = defToNextStep == 0 ? 1.0
-                                                        : currToNextStep / defToNextStep;
+                    float progress = fullToNextStep == 0 ? 1.0
+                                                         : currToNextStep / fullToNextStep;
                     if (progress > 1.0)
                         progress = 1.0;
-
+                        
                     Point upMovement;
                     upMovement.x = _movement.x - currRel.x;
                     upMovement.y = _movement.y - currRel.y;
-                    upMovement.z = (0.5 - abs(0.5 - progress)) * 2 * _gaitHeight - currRel.z;
-/*                    Serial.print(progress);
-                    Serial.print(" -> ");
-                    Serial.print(upMovement.z);
-                    Serial.println(" !");
-*/
-                    // Normalize upMovement to have defToNextStep length
-                    normalize(upMovement, defToNextStep / currToNextStep);
+                    float currHeight = (0.5 - fabs(0.5 - progress)) * 2 * _gaitHeight;
+                    //if (currHeight < 0)
+                    //    currHeight = 0;
+
+                    upMovement.z = currHeight - currRel.z;
+                    
+                   /* if (gi == 0 && li == 0)
+                    {
+                        Serial.print(progress);
+                        Serial.print("\t->\t");
+                        Serial.print(currHeight);
+                        Serial.print("\t->\t");
+                        Serial.print(upMovement.z);
+                        Serial.println(" !");
+                    }*/
+                    
+
+                    // Normalize upMovement to have fullToNextStep length
+                    normalize2D(upMovement, fullToNextStep / currToNextStep);
                     
                     Point nextRel;
-                    nextRel.x = (upMovement.x / 1000.0) * _stepSpeedUp * deltaT;
-                    nextRel.y = (upMovement.y / 1000.0) * _stepSpeedUp * deltaT;
-                    nextRel.z = (upMovement.z / 1000.0) * _stepSpeedUp * deltaT;
+                    nextRel.x = upMovement.x * 0.001 * _stepSpeedUp * deltaT;
+                    nextRel.y = upMovement.y * 0.001 * _stepSpeedUp * deltaT;
+                    nextRel.z = upMovement.z/* * 0.001 * _stepSpeedUp * deltaT*/;
 
                     _groups[gi].legs()[li]->reachRelativeToCurrent(nextRel);
                 }
 
-                if (downCount == _groups[gi].count())
+                if (downLegCount == _groups[gi].count())
                     _groups[gi].setState(LegGroup::DOWN);
             }
         }
@@ -221,15 +241,15 @@ private:
         // TODO: radial movement
 
         // Using square distance to spare square root calculation
-        float sumSqrDistance = 0.0;
-        for (Leg** leg = group.legs(); leg < group.legs() + group.count(); leg++)
+        float sumDistance = 0.0;
+        for (PLeg* leg = group.legs(); leg < group.legs() + group.count(); ++leg)
         {
             Point currLegPos = (*leg)->getCurrentRelative();
-            sumSqrDistance += distanceSqr2D(currLegPos.x, currLegPos.y, _movement.x, _movement.y);
+            sumDistance += distance2D(currLegPos.x, currLegPos.y, _movement.x, _movement.y);
         }
 
         // Use invCount to spare divide operation in favor of multiply
-        return sumSqrDistance * group.invCount();
+        return sumDistance * group.invCount();
     }
 
 private:
@@ -241,7 +261,7 @@ private:
     float _stepSpeedDown;
     float _stepSpeedUp;
     float _gaitHeight;
-    float const _raiseFactorThreshold;
+    float _raiseFactorThreshold;
     float const _putDownDistanceThreshold;
 
     unsigned long _lastTickTime;
