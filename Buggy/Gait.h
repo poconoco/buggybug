@@ -73,9 +73,10 @@ public:
         , _minGroupDown(minGroupDown)
         , _gaitHeight(25) // TODO: configurable
         , _putDownDistanceThreshold(0.5) // TODO: configurable
+        , _upAllowed(true)
     {
         _lastTickTime = millis();
-        setSpeed(3.0);
+        setSpeed(2.0);
     }
 
     void updateMovementForce(Point& force)
@@ -91,7 +92,7 @@ public:
     void setSpeed(float speed)
     {
         _stepSpeedUp = speed;
-        _stepSpeedDown = _stepSpeedUp * 1.2;
+        _stepSpeedDown = _stepSpeedUp * (1 + 0.2);
         
     }
 
@@ -102,7 +103,8 @@ public:
         _movement = movement;
         _movement.z = 0;
         
-        _raiseFactorThreshold = distance2D(0, 0, _movement.x, _movement.y) * 1.2;
+        _raiseFactorThreshold = distance2D(0, 0, _movement.x, _movement.y) * (1 + 0.2);
+        _maxFactorThreshold = _raiseFactorThreshold * 2.25;
     }
     
     void stop()
@@ -125,6 +127,10 @@ public:
             if (_groups[gi].state() == LegGroup::DOWN)
             {
                 ++downGroupCount;
+
+                // TODO avoid double factor calculation
+                if (calcRaiseFactorForGroup(_groups[gi]) > _maxFactorThreshold)
+                    continue;
 
                 for (int li = 0; li < _groups[gi].count(); ++li)
                 {
@@ -158,13 +164,17 @@ public:
                 }
             }
 
-            if (bestFactor > _raiseFactorThreshold)
+            if (bestFactor > _raiseFactorThreshold &&
+                _upAllowed)
                 _groups[bestGi].setState(LegGroup::UP);
         }
 
         // 3: Move leg groups that are raised, put down if needed
         for (int gi = 0; gi < _groupCount; ++gi)
         {
+            if (floatEqual(_movement.x, 0.0) && floatEqual(_movement.y, 0.0))
+                break;
+          
             if (_groups[gi].state() != LegGroup::DOWN)
             {
                 int downLegCount = 0;
@@ -197,22 +207,9 @@ public:
                     upMovement.x = _movement.x - currRel.x;
                     upMovement.y = _movement.y - currRel.y;
                     float currHeight = (0.5 - fabs(0.5 - progress)) * 2 * _gaitHeight;
-                    //if (currHeight < 0)
-                    //    currHeight = 0;
 
                     upMovement.z = currHeight - currRel.z;
                     
-                   /* if (gi == 0 && li == 0)
-                    {
-                        Serial.print(progress);
-                        Serial.print("\t->\t");
-                        Serial.print(currHeight);
-                        Serial.print("\t->\t");
-                        Serial.print(upMovement.z);
-                        Serial.println(" !");
-                    }*/
-                    
-
                     // Normalize upMovement to have fullToNextStep length
                     normalize2D(upMovement, fullToNextStep / currToNextStep);
                     
@@ -262,7 +259,9 @@ private:
     float _stepSpeedUp;
     float _gaitHeight;
     float _raiseFactorThreshold;
+    float _maxFactorThreshold;
     float const _putDownDistanceThreshold;
+    bool _upAllowed;
 
     unsigned long _lastTickTime;
 };

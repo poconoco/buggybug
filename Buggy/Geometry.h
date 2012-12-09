@@ -12,10 +12,15 @@
 #define distanceSqr2D(x1, y1, x2, y2) (sqr((x1) - (x2)) + sqr((y1) - (y2)))
 #define distance2D(x1, y1, x2, y2) (sqrt(distanceSqr2D(x1, y1, x2, y2)))
 
+// TODO: Rename third quarter fix to something more meaningful
 float polarAngle(float x, float y, bool thirdQuarterFix)
 {
     if (x > 0)
+    {
+        if (thirdQuarterFix && y > 0)
+            return atan(y / x) - 2 * PI;
         return atan(y / x);
+    }
 
     if (x < 0 && y >= 0)
     {
@@ -116,6 +121,11 @@ void normalize2D(Point& vector, float normalizer)
     vector.x = vector.x * normalizer;
     vector.y = vector.y * normalizer;
 //    vector.z = vector.z * normalizer;
+}
+
+bool floatEqual(float a, float b)
+{
+    return fabs(a - b) < 0.00001;
 }
 
 #endif

@@ -195,12 +195,12 @@ void loop()
         case 'w':
             //progress = moveSimple.walk(1, Point(0, 80, 50), progress, processCommands);
             if (lastCommand != command)
-                moveGait.updateMovementDirect(Point(0, 20, 0));
+                moveGait.updateMovementDirect(Point(0, 30, 0));
             break;
         case 's':
             //progress = moveSimple.walk(1, Point(0, -80, 50), progress, processCommands);
             if (lastCommand != command)
-                moveGait.updateMovementDirect(Point(0, -20, 0));
+                moveGait.updateMovementDirect(Point(0, -30, 0));
             break;
         case 'a':
             //progress = moveSimple.walk(1, Point(-70, 0, 50), progress, processCommands);
