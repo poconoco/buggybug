@@ -20,7 +20,7 @@ public:
         leftLegs[2].setPins(32, 31, 30);
         
         rightLegs[0].configureServoDirections(-1, -1,  1, false);
-        leftLegs [0].configureServoDirections(-1,  1, -1, false);
+        leftLegs [0].configureServoDirections(-1,  1, -1, true);
         
         rightLegs[1].configureServoDirections(-1, -1,  1, false);
         leftLegs [1].configureServoDirections(-1,  1, -1, true);
@@ -37,8 +37,8 @@ public:
             leftLegs [i].configureTibia(58, deg2rad(-70));
         }
         
-        rightLegs[0].configureCoxa( 34,  65, deg2rad(      20),  10);                        
-        leftLegs [0].configureCoxa(-34,  65, deg2rad(180 - 20), -10);
+        rightLegs[0].configureCoxa( 34,  65, deg2rad(          20),  10);                        
+        leftLegs [0].configureCoxa(-34,  65, deg2rad(- (180 + 20)), -10);
     
         rightLegs[1].configureCoxa( 52,   0, deg2rad(-         20),  10);                        
         leftLegs [1].configureCoxa(-52,   0, deg2rad(- (180 - 20)), -10);
@@ -46,11 +46,11 @@ public:
         rightLegs[2].configureCoxa( 34, -65, deg2rad(-         63),  10);                        
         leftLegs [2].configureCoxa(-34, -65, deg2rad(- (180 - 63)), -10);
     
-        rightLegs[0].configureDefault(Point( 90, 110, -70), true);
-        leftLegs [0].configureDefault(Point(-90, 110, -70), true);
+        rightLegs[0].configureDefault(Point( 60, 140, -70), true);
+        leftLegs [0].configureDefault(Point(-60, 140, -70), true);
       
-        rightLegs[1].configureDefault(Point( 130, 00, -70), true);
-        leftLegs [1].configureDefault(Point(-130, 00, -70), true);
+        rightLegs[1].configureDefault(Point( 120, 00, -70), true);
+        leftLegs [1].configureDefault(Point(-120, 00, -70), true);
     
         rightLegs[2].configureDefault(Point( 80, -130, -70), true);
         leftLegs [2].configureDefault(Point(-80, -130, -70), true);
