@@ -10,9 +10,9 @@ static Point zero(0,0,0);
 static const int N = 6;
 static Leg legs[N];
 
-static PLeg group1Legs[3] {&legs[0], &legs[2], &legs[4]};
-static PLeg group2Legs[3] {&legs[1], &legs[3], &legs[5]};
-static LegGroup legGroups[2] { LegGroup(group1Legs, 3), LegGroup(group2Legs, 3) };
+static PLeg group1Legs[3] = {&legs[0], &legs[2], &legs[4]};
+static PLeg group2Legs[3] = {&legs[1], &legs[3], &legs[5]};
+static LegGroup legGroups[2] = { LegGroup(group1Legs, 3), LegGroup(group2Legs, 3) };
 
 static Gait moveGait(legGroups, 2, 1);
 static SimpleMovements moveSimple(legs, N);
@@ -193,24 +193,24 @@ void loop()
     switch(currCommand)
     {
         case 'w':
-            //progress = moveSimple.walk(1, Point(0, 80, 50), progress, processCommands);
-            if (lastCommand != command)
-                moveGait.updateMovementDirect(Point(0, 30, 0));
+            progress = moveSimple.walk(1, Point(0, 80, 50), progress, processCommands);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(0, 30, 0));
             break;
         case 's':
-            //progress = moveSimple.walk(1, Point(0, -80, 50), progress, processCommands);
-            if (lastCommand != command)
-                moveGait.updateMovementDirect(Point(0, -30, 0));
+            progress = moveSimple.walk(1, Point(0, -80, 50), progress, processCommands);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(0, -30, 0));
             break;
         case 'a':
-            //progress = moveSimple.walk(1, Point(-70, 0, 50), progress, processCommands);
-            if (lastCommand != command)
-                moveGait.updateMovementDirect(Point(-20, 0, 0));
+            progress = moveSimple.walk(1, Point(-70, 0, 50), progress, processCommands);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(-20, 0, 0));
             break;
         case 'd':
-            //progress = moveSimple.walk(1, Point(70, 0, 50), progress, processCommands);
-            if (lastCommand != command)
-                moveGait.updateMovementDirect(Point(20, 0, 0));
+            progress = moveSimple.walk(1, Point(70, 0, 50), progress, processCommands);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(20, 0, 0));
             break;
         case 'e':
             if (lastMoveCommand != command)
