@@ -76,7 +76,7 @@ public:
         , _upAllowed(true)
     {
         _lastTickTime = millis();
-        setSpeed(2.0);
+        setSpeed(3.0);
     }
 
     void updateMovementForce(Point& force)
