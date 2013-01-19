@@ -58,6 +58,7 @@ void setup()
     Serial.println("setup()");
     
     LegConfiguration::apply(legs, N);
+    moveSimple.rememberDefault();
    
     for (Leg* leg = legs; leg < legs + N; leg++)
         leg->reachRelativeToDefault(zero);
@@ -82,8 +83,95 @@ void setup()
     legs[i].detach();
 */
 
+    if (digitalRead(9) == HIGH)
+        runSequence1();
 } 
  
+ 
+void runSequence1()
+{
+    attachAll();
+    moveSimple.shiftReset();
+
+    moveSimple.walk(4, Point(0, 80, 50));
+    moveSimple.smoothTo(zero);
+
+    const int dt = 2;
+    const float da = PI / 300;
+    const float dh = 1.0;
+    const int iterations = 30;
+
+    for (int i = 0; i < iterations; ++i)
+    {
+        moveSimple.shiftRoll(- da);
+        delay(dt);
+    }
+    
+    for (int i = 0; i < iterations; ++i)
+    {
+        moveSimple.shiftPitch(- da);
+        delay(dt);
+    }
+    
+    for (int i = 0; i < iterations * 2; ++i)
+    {
+        moveSimple.shiftRoll(da);
+        delay(dt);
+    }
+        
+    for (int i = 0; i < iterations * 2; ++i)
+    {
+        moveSimple.shiftPitch(da);
+        delay(dt);
+    }
+    
+    for (int i = 0; i < iterations; ++i)
+    {
+        moveSimple.shiftPitch(- da);
+        moveSimple.shiftRoll(- da);
+        delay(dt);
+    }
+    
+    moveSimple.shiftReset();
+ 
+    moveSimple.walk(8, Point(0, 80, 50));
+    
+    moveSimple.smoothTo(zero);
+    moveSimple.rotate(11, 1.0);
+
+    moveSimple.smoothTo(zero);
+    
+    for (int i = 0; i < iterations * 4; ++i)
+    {
+        moveSimple.shift(Point(0,0, dh));
+        delay(dt);
+    }
+    for (int i = 0; i < iterations * 5; ++i)
+    {
+        moveSimple.shift(Point(0,0, -dh));
+        delay(dt);
+    }
+    
+    moveSimple.walk(8, Point(0, 80, 50));
+    moveSimple.shiftReset();
+    
+
+    moveSimple.smoothTo(zero);
+    moveSimple.walk(2, Point(70, 0, 50));
+    moveSimple.smoothTo(zero);
+    moveSimple.walk(4, Point(-70, 0, 50));
+    moveSimple.smoothTo(zero);
+    moveSimple.walk(2, Point(70, 0, 50));
+    
+    moveSimple.smoothTo(zero);
+    moveSimple.walk(4, Point(0, 80, 50));
+    
+    moveSimple.smoothTo(zero);
+    moveSimple.rotate(11, 1.0);
+    
+    detachAll();
+      
+}
  
 char command = 0;
 unsigned long lastCommandTime = 0;
@@ -135,10 +223,12 @@ bool processCommands()
         
         return false;
     }
-    else if (incoming == 'z')
+    else if (incoming == 'z' || incoming == '0')
     {
         moveSimple.smoothTo(zero);
         tone(9, 2000, 100);
+        if (incoming == '0')
+            runSequence1();
         
         command = incoming;
         lastCommandTime = millis();
@@ -147,18 +237,41 @@ bool processCommands()
         progress = 0;
         return false;
     }
-    else if (incoming == 'r' || incoming == 'f')
+    else if (incoming == 'r' ||
+             incoming == 'f' ||
+             incoming == 't' ||
+             incoming == 'g' ||
+             incoming == 'y' ||
+             incoming == 'h' ||
+             incoming == 'u' ||
+             incoming == 'j' ||
+             incoming == 'i' ||
+             incoming == 'k' ||
+             incoming == 'x')
     {
         command = incoming;
         lastCommandTime = millis();
         Serial.println(commandToStr(command));
-        
-        for (int i = 0; i < N; ++i)
+
+        switch (incoming)
         {
-            Point def = legs[i].getDefaultPos(); 
-            def.z = def.z + (incoming == 'r' ? -2 : 2);
-            legs[i].shiftDefault(def);
+            case 'r': moveSimple.shift(Point( 0,  0, -2)); break;
+            case 'f': moveSimple.shift(Point( 0,  0,  2)); break;
+
+            case 'y': moveSimple.shift(Point( 0, -2,  0)); break;
+            case 'h': moveSimple.shift(Point( 0,  2,  0)); break;
+            case 'g': moveSimple.shift(Point( 2,  0,  0)); break;
+            case 'j': moveSimple.shift(Point(-2,  0,  0)); break;
+
+            case 't': moveSimple.shiftRoll(- (PI / 100)); break;
+            case 'u': moveSimple.shiftRoll(+ (PI / 100)); break;
+            case 'i': moveSimple.shiftPitch(+ (PI / 100)); break;
+            case 'k': moveSimple.shiftPitch(- (PI / 100)); break;
+            
+            case 'x': moveSimple.shiftReset(); break;
         }
+
+        return false;
     }
 
     // Command is the same, continuing

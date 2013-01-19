@@ -131,7 +131,15 @@ public:
         
         reach(_currentPos);
     }
-    
+
+    void shiftDefaultRelative(Point& delta)
+    {
+        _currentPos.assign(_currentPos + delta);
+        _defaultPos.assign(_defaultPos + delta);
+
+        reach(_currentPos);
+    }
+
     void reachRelativeToDefault(Point& dest)
     {
         _currentPos.assign(_defaultPos + dest);

@@ -78,6 +78,13 @@ struct Point
                      z * m);
     }
 
+    Point operator/(float d)
+    {
+        return Point(x / d,
+                     y / d,
+                     z / d);
+    }
+
     void operator=(Point& that)
     {
         x = that.x;
@@ -98,6 +105,11 @@ struct Point
         x = _x;
         y = _y;
         z = _z;
+    }
+
+    void assignZero()
+    {
+        x = y = z = 0;
     }
 
     float maxDistance(Point& that)
