@@ -8,9 +8,97 @@ public:
     SimpleMovements(Leg* legs, int N)
         : _legs(legs)
         , _N(N)
-    {}
-  
-    float walk(int steps, Point direction, float startProgress, bool (*pContinue)() = NULL)
+    {
+  //      _defaultPositions = new Point[_N];
+    }
+
+    ~SimpleMovements()
+    {
+//        delete[] _defaultPositions;
+    }
+
+    void rememberDefault()
+    {
+        for (unsigned char i = 0; i < _N; ++i)
+            _defaultPositions[i] = _legs[i].getDefaultPos();
+
+        _linearShift.assignZero();
+    }
+
+    void shift(Point step)
+    {
+        for (unsigned char i = 0; i < _N; ++i)
+            _legs[i].shiftDefaultRelative(step);
+        
+        // TODO: Do we need to store shift in _linearShift?
+    }
+
+    void shiftPitch(float angleDelta)
+    {
+        float sinval = sin(angleDelta);
+        float cosval = cos(angleDelta);
+
+        for (unsigned char i = 0; i < _N; ++i)
+        {
+            Point currDef = _legs[i].getDefaultPos();
+            Point newDef;
+            newDef.x = currDef.x;
+            newDef.y = currDef.y * cosval - currDef.z * sinval;
+            newDef.z = currDef.y * sinval + currDef.z * cosval;
+
+            _legs[i].shiftDefault(newDef);
+        }
+    }
+
+    void shiftRoll(float angleDelta)
+    {
+        float sinval = sin(angleDelta);
+        float cosval = cos(angleDelta);
+
+        for (unsigned char i = 0; i < _N; ++i)
+        {
+            Point currDef = _legs[i].getDefaultPos();
+            Point newDef;
+            newDef.x = currDef.x * cosval - currDef.z * sinval;
+            newDef.y = currDef.y;
+            newDef.z = currDef.x * sinval + currDef.z * cosval;
+
+            _legs[i].shiftDefault(newDef);
+        }
+    }
+    
+    void shiftReset()
+    {
+      /*
+        for (unsigned char i = 0; i < _N; ++i)
+            _legs[i].shiftDefault(_defaultPositions[i]);
+      
+        return;*/
+        // TODO: Fix slow reset:
+      
+        const int steps = 20;
+        Point currDefs[_N];
+
+        for (unsigned char i = 0; i < _N; ++i)
+            currDefs[i] = _legs[i].getDefaultPos();
+
+        for (unsigned char si = 0; si < steps; ++si)
+        {
+            for (unsigned char i = 0; i < _N; ++i)
+            {
+                Point step = (_defaultPositions[i] - currDefs[i]) / steps;
+                _legs[i].shiftDefaultRelative(step);
+            }
+
+            delay(2);
+        }
+
+        // Prevent default migration
+        for (unsigned char i = 0; i < _N; ++i)
+            _legs[i].shiftDefault(_defaultPositions[i]);
+    }
+
+    float walk(int steps, Point direction, float startProgress = 0, bool (*pContinue)() = NULL)
     {
         float p = startProgress;
         for (int i = 0; i < steps; i++)
@@ -65,7 +153,7 @@ public:
         return p;
     }
     
-    float rotate(int steps, float clockwise, float startProgress, bool (*pContinue)() = NULL)
+    float rotate(int steps, float clockwise, float startProgress = 0, bool (*pContinue)() = NULL)
     {
         float p = startProgress;
         for (int i = 0; i < steps; i++)
@@ -166,7 +254,12 @@ public:
 private:
 
     Leg* _legs;
+    // TODO: FIXME:
+    Point _defaultPositions[6];
     const int _N;
+
+    Point _linearShift;
+
 };
 
 #endif
