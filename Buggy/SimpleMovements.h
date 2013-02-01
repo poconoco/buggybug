@@ -1,7 +1,6 @@
 #ifndef SIMPLE_MOVEMENTS_H__
 #define SIMPLE_MOVEMENTS_H__
 
-
 class SimpleMovements
 {
 public:
@@ -9,6 +8,8 @@ public:
         : _legs(legs)
         , _N(N)
     {
+        _speedFactor = 0.025;
+//        _speedFactor = 0.05;
   //      _defaultPositions = new Point[_N];
     }
 
@@ -143,7 +144,7 @@ public:
                 if (pContinue != NULL && ! pContinue())
                     return p;
                     
-                p += 0.025 /*+ 0.04 * (0.5 - fabs(0.5 - progress))*/;
+                p += _speedFactor /*+ 0.04 * (0.5 - fabs(0.5 - progress))*/;
             }
     
             if (p > 2)
@@ -209,7 +210,7 @@ public:
                 if (pContinue != NULL && ! pContinue())
                     return p;
                     
-                p += 0.025 /*+ 0.00 * (0.5 - fabs(0.5 - progress))*/;
+                p += _speedFactor /*+ 0.00 * (0.5 - fabs(0.5 - progress))*/;
             }
     
             if (p > 2)
@@ -259,6 +260,8 @@ private:
     const int _N;
 
     Point _linearShift;
+
+    float _speedFactor; 
 
 };
 
