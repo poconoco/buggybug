@@ -54,6 +54,8 @@ bool attachChange()
 void setup() 
 {
     Serial.begin(9600);
+    Serial1.begin(9600);
+    Serial1.println("ksjfhksjd skdhf kjsdhfueyeyrueryeuu  iw ksjh skfd ");
   
     Serial.println("setup()");
     
@@ -206,11 +208,58 @@ const char* commandToStr(char cmd)
     return "n/a";
 }
 
+bool tryMultibyte(char cmd)
+{
+    if (cmd != 'b')
+        return false;
+        
+    while (Serial1.available() < 7) {}
+        
+    char x, y, z, pitch, roll, yaw;
+    x = Serial1.read();
+    y = Serial1.read();
+    z = Serial1.read();
+    pitch = Serial1.read();
+    roll = Serial1.read();
+    yaw = Serial1.read();
+
+    // Confirm footer byte
+    char footer = Serial1.read();
+
+    if (footer != 'B')
+    {
+        return false;
+    }
+    
+    if (cmd == 'b')
+    {
+        moveSimple.shiftAbsolute(
+            Point(normalizeByte(x, 20),  
+                  normalizeByte(y, 20),
+                  normalizeByte(z, 20)),
+            normalizeByte(pitch, PI / 6),
+            normalizeByte(roll, PI / 6),
+            normalizeByte(yaw, PI / 6)
+            );
+    }
+
+    if (cmd == 'M')
+    {
+        // TODO movement
+    }
+    
+    return true;
+}
+
 bool processCommands()
 {
-    int incoming = -1;
-    while (Serial.available() > 0)
-        incoming = Serial.read();
+    char incoming;
+    if (Serial1.available() > 0)
+        incoming = Serial1.read();
+    else return true;
+
+    if (tryMultibyte(incoming))
+        return true;
 
     // One shot actions
     if (incoming == ' ')
@@ -274,12 +323,58 @@ bool processCommands()
         return false;
     }
 
+
+    static char lastMoveCommand = 0;
+    static char lastCommand = 0;
+    bool moved = true;
+    
+    switch(command)
+    {
+        case 'w':
+            progress = moveSimple.walk(1, Point(0, 80, 70), progress, NULL);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(0, 30, 0));
+            break;
+        case 's':
+            progress = moveSimple.walk(1, Point(0, -80, 70), progress, NULL);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(0, -30, 0));
+            break;
+        case 'a':
+            progress = moveSimple.walk(1, Point(-70, 0, 70), progress, NULL);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(-20, 0, 0));
+            break;
+        case 'd':
+            progress = moveSimple.walk(1, Point(70, 0, 70), progress, NULL);
+            //if (lastCommand != command)
+            //    moveGait.updateMovementDirect(Point(20, 0, 0));
+            break;
+        case 'e':
+            if (lastMoveCommand != command)
+                moveSimple.smoothTo(zero);
+            progress = moveSimple.rotate(1, 1.0, progress, NULL);
+            break;
+        case 'q':
+            if (lastMoveCommand != command)
+                moveSimple.smoothTo(zero);
+            progress = moveSimple.rotate(1, -1.0, progress, NULL);
+            break;
+        default:
+            moved = false;
+            moveGait.stop();
+    }
+
     // Command is the same, continuing
     if (incoming == command)
     {
         lastCommandTime = millis();
         return true;
     }
+
+    lastCommand = command;
+    if (moved)
+        lastMoveCommand = command;
 
     // Check if continuous command timed out
     if (incoming <= 0 && millis() - lastCommandTime < 500)
@@ -298,51 +393,9 @@ void loop()
 { 
     processCommands();
 
-    static char lastMoveCommand = 0;
-    static char lastCommand = 0;
-    bool moved = true;
-    const char currCommand = command;
+//    const char currCommand = command;
     
-    switch(currCommand)
-    {
-        case 'w':
-            progress = moveSimple.walk(1, Point(0, 80, 50), progress, processCommands);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(0, 30, 0));
-            break;
-        case 's':
-            progress = moveSimple.walk(1, Point(0, -80, 50), progress, processCommands);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(0, -30, 0));
-            break;
-        case 'a':
-            progress = moveSimple.walk(1, Point(-70, 0, 50), progress, processCommands);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(-20, 0, 0));
-            break;
-        case 'd':
-            progress = moveSimple.walk(1, Point(70, 0, 50), progress, processCommands);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(20, 0, 0));
-            break;
-        case 'e':
-            if (lastMoveCommand != command)
-                moveSimple.smoothTo(zero);
-            progress = moveSimple.rotate(1, 1.0, progress, processCommands);
-            break;
-        case 'q':
-            if (lastMoveCommand != command)
-                moveSimple.smoothTo(zero);
-            progress = moveSimple.rotate(1, -1.0, progress, processCommands);
-            break;
-        default:
-            moved = false;
-            moveGait.stop();
-    }
 
-    lastCommand = currCommand;
-    if (moved)
-        lastMoveCommand = currCommand;
         
     delay(2);
     moveGait.tick();
