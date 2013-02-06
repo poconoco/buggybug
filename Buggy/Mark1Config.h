@@ -49,7 +49,7 @@ public:
         rightLegs[0].configureDefault(Point( 80, 120, -70), true);
         leftLegs [0].configureDefault(Point(-80, 120, -70), true);
       
-        rightLegs[1].configureDefault(Point( 120, -20, -70), true);
+        rightLegs[1].configureDefault(Point( 120, -20, -65), true);
         leftLegs [1].configureDefault(Point(-120, -20, -70), true);
     
         rightLegs[2].configureDefault(Point( 80, -130, -70), true);

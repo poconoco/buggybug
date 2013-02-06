@@ -26,10 +26,26 @@ public:
         _linearShift.assignZero();
     }
 
-    void shift(Point step)
+    void shiftAbsolute(Point absolute, float pitch, float roll, float yaw)
     {
         for (unsigned char i = 0; i < _N; ++i)
-            _legs[i].shiftDefaultRelative(step);
+            _legs[i].delayMove(); 
+      
+        for (unsigned char i = 0; i < _N; ++i)
+            _legs[i].shiftDefault(_defaultPositions[i] + absolute);
+            
+        shiftPitch(pitch);
+        shiftRoll(roll);
+        shiftYaw(yaw);
+
+        for (unsigned char i = 0; i < _N; ++i)
+            _legs[i].commitDelayedMove(); 
+    }
+    
+    void shift(Point delta)
+    {
+        for (unsigned char i = 0; i < _N; ++i)
+            _legs[i].shiftDefaultRelative(delta);
         
         // TODO: Do we need to store shift in _linearShift?
     }
@@ -67,16 +83,26 @@ public:
             _legs[i].shiftDefault(newDef);
         }
     }
+
+    void shiftYaw(float angleDelta)
+    {
+        float sinval = sin(angleDelta);
+        float cosval = cos(angleDelta);
+
+        for (unsigned char i = 0; i < _N; ++i)
+        {
+            Point currDef = _legs[i].getDefaultPos();
+            Point newDef;
+            newDef.x = currDef.x * cosval - currDef.y * sinval;
+            newDef.y = currDef.x * sinval + currDef.y * cosval;
+            newDef.z = currDef.z;
+
+            _legs[i].shiftDefault(newDef);
+        }
+    }
     
     void shiftReset()
     {
-      /*
-        for (unsigned char i = 0; i < _N; ++i)
-            _legs[i].shiftDefault(_defaultPositions[i]);
-      
-        return;*/
-        // TODO: Fix slow reset:
-      
         const int steps = 20;
         Point currDefs[_N];
 

@@ -140,4 +140,9 @@ bool floatEqual(float a, float b)
     return fabs(a - b) < 0.00001;
 }
 
+float normalizeByte(char b, float normal)
+{
+    return ((float) b / 128) * normal;
+}
+
 #endif

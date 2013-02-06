@@ -20,6 +20,7 @@ public:
         , _cServoDirection(0.0)
         , _fServoDirection(0.0)
         , _tServoDirection(0.0)
+        , _delayedMove(false)
     {}
     
     void debug(bool on)
@@ -123,7 +124,7 @@ public:
             reach(def);
     }
     
-    void shiftDefault(Point& def)
+    void shiftDefault(Point def)
     {
         Point delta = def - _defaultPos;
         _currentPos.assign(_currentPos + delta);
@@ -183,6 +184,17 @@ public:
         return _raisePoint;
     }
     
+    void delayMove()
+    {
+        _delayedMove = true;
+    }
+    
+    void commitDelayedMove()
+    {
+        _delayedMove = false;
+        move(_cAngle, _fAngle, _tAngle);
+    }
+
 private:
 
     bool reach(Point& dest)
@@ -244,6 +256,14 @@ private:
         
     void move(float cAngle, float fAngle, float tAngle)
     {
+        if (_delayedMove)
+        {
+            _cAngle = cAngle;
+            _fAngle = fAngle;
+            _tAngle = tAngle;
+            return;
+        }  
+      
 //        if (_cServoDirection == 0.0 || _fServoDirection == 0.0 || _tServoDirection == 0.0)
   //          log("ERROR: Null servo directions detected");
       
@@ -332,6 +352,12 @@ private:
     float _cServoDirection;
     float _fServoDirection;
     float _tServoDirection;
+    
+    // Delayed move
+    bool _delayedMove;
+    float _cAngle;
+    float _fAngle;
+    float _tAngle;
   
     Point _raisePoint;
     Point _defaultPos;  
