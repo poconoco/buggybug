@@ -2,8 +2,10 @@
 #define LEG_H__
 
 #include <Servo.h>
+#include <Arduino.h>
 
 #include "Geometry.h"
+#include "SmoothFloat.h"
 
 #define DONT_MOVE 123456.123456
 
@@ -20,7 +22,12 @@ public:
         , _cServoDirection(0.0)
         , _fServoDirection(0.0)
         , _tServoDirection(0.0)
-        , _delayedMove(false)
+        , _delayReach(false)
+        , _cAngle(_cServoRestAngle, _cServoRestAngle)
+        , _fAngle(_fServoRestAngle, _fServoRestAngle)
+        , _tAngle(_tServoRestAngle, _tServoRestAngle)
+        , _lastTickTime(0)
+        , _speedRadMsec(PI / 1000)
     {}
     
     void debug(bool on)
@@ -184,21 +191,40 @@ public:
         return _raisePoint;
     }
     
-    void delayMove()
+    void delayReach()
     {
-        _delayedMove = true;
+        _delayReach = true;
     }
     
-    void commitDelayedMove()
+    void commitDelayedReach()
     {
-        _delayedMove = false;
-        move(_cAngle, _fAngle, _tAngle);
+        _delayReach = false;
+        reach(_delayedReach);
+    }
+
+    void tick()
+    {
+        const unsigned long now = millis();
+        const unsigned long deltaT = now - _lastTickTime;
+                
+        _lastTickTime = now;
+
+        const float stepDelta = _speedRadMsec * deltaT;
+
+        moveInternal(_cAngle.getCurrent(stepDelta),
+                     _fAngle.getCurrent(stepDelta),
+                     _tAngle.getCurrent(stepDelta));
     }
 
 private:
 
-    bool reach(Point& dest)
+    void reach(Point& dest)
     {
+        if (_delayReach)
+        {
+            _delayedReach = dest;
+            return;
+        }        
         
         float hDist = sqrt( sqr(dest.x - _cStart.x) +  sqr(dest.y - _cStart.y) );
         float additionalCoxaAngle = hDist == 0.0 ? DONT_MOVE 
@@ -224,7 +250,7 @@ private:
         if (localDistSqr > sqr(_fLength + _tLenght))
         {
 //            log("Can't reach!");
-            return false;
+            return;
         }
         
         // Find joint as circle intersect ( equations from http://e-maxx.ru/algo/circles_intersection & http://e-maxx.ru/algo/circle_line_intersection )
@@ -256,17 +282,15 @@ private:
         
     void move(float cAngle, float fAngle, float tAngle)
     {
-        if (_delayedMove)
-        {
-            _cAngle = cAngle;
-            _fAngle = fAngle;
-            _tAngle = tAngle;
-            return;
-        }  
-      
-//        if (_cServoDirection == 0.0 || _fServoDirection == 0.0 || _tServoDirection == 0.0)
-  //          log("ERROR: Null servo directions detected");
-      
+        _cAngle.setTarget(cAngle);
+        _fAngle.setTarget(fAngle);
+        _tAngle.setTarget(tAngle);
+
+        tick();
+    }
+
+    void moveInternal(float cAngle, float fAngle, float tAngle)
+    {
         if (! _attached)
             return;
       
@@ -352,13 +376,7 @@ private:
     float _cServoDirection;
     float _fServoDirection;
     float _tServoDirection;
-    
-    // Delayed move
-    bool _delayedMove;
-    float _cAngle;
-    float _fAngle;
-    float _tAngle;
-  
+      
     Point _raisePoint;
     Point _defaultPos;  
     Point _currentPos;
@@ -368,11 +386,23 @@ private:
     int _coxaPin;
     int _femurPin;
     int _tibiaPin;
-  
+
+    // Delayed move
+    bool _delayReach;
+    Point _delayedReach;
+    
     // Arduino servos
     Servo _cServo;
     Servo _fServo;
     Servo _tServo;
+
+    // Smooth angle movement
+    unsigned long _lastTickTime;
+    SmoothFloat _cAngle;
+    SmoothFloat _fAngle;
+    SmoothFloat _tAngle;
+    float _speedRadMsec;
+    
 };
 
 typedef Leg* PLeg;

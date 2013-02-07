@@ -179,33 +179,27 @@ char command = 0;
 unsigned long lastCommandTime = 0;
 static float progress = 0; 
 
-const char* commandToStr(char cmd)
+SmoothFloat fpitch(0,0);
+SmoothFloat froll(0,0);
+SmoothFloat fyaw(0,0);
+Point bodyShift;
+
+void tick()
 {
-    switch (cmd)
-    {
-        case 'w':
-            return "forward";
-        case 's':
-            return "backward";
-        case 'a':
-            return "step left";
-        case 'd':
-            return "step right";
-        case 'q':
-            return "rotate left";
-        case 'e':
-            return "rotate right";
-        case ' ':
-            return "engine start/stop";
-        case 'z':
-            return "default legs pos";
-        case 'r':
-            return "body up";
-        case 'f':
-            return "body down";
-    }
-    
-    return "n/a";
+    for (int i = 0; i < N; i++)
+        legs[i].tick();
+        
+    static unsigned long _lastTickTime = 0;
+    const unsigned long now = millis();
+    const unsigned long deltaT = now - _lastTickTime;
+    _lastTickTime = now;
+    const float stepDelta = ((PI / 4) / 1000) * deltaT;
+        
+    moveSimple.shiftAbsolute(
+        bodyShift,
+        fpitch.getCurrent(stepDelta),
+        froll.getCurrent(stepDelta),
+        fyaw.getCurrent(stepDelta));
 }
 
 bool tryMultibyte(char cmd)
@@ -213,7 +207,8 @@ bool tryMultibyte(char cmd)
     if (cmd != 'b')
         return false;
         
-    while (Serial1.available() < 7) {}
+    while (Serial1.available() < 7)
+        tick();
         
     char x, y, z, pitch, roll, yaw;
     x = Serial1.read();
@@ -233,14 +228,12 @@ bool tryMultibyte(char cmd)
     
     if (cmd == 'b')
     {
-        moveSimple.shiftAbsolute(
-            Point(normalizeByte(x, 20),  
-                  normalizeByte(y, 20),
-                  normalizeByte(z, 20)),
-            normalizeByte(pitch, PI / 6),
-            normalizeByte(roll, PI / 6),
-            normalizeByte(yaw, PI / 6)
-            );
+        bodyShift.x = normalizeByte(x, 20);  
+        bodyShift.y = normalizeByte(y, 20);
+        bodyShift.z = normalizeByte(z, 20);
+        fpitch.setTarget(normalizeByte(pitch, PI / 6));
+        froll.setTarget(normalizeByte(roll, PI / 6));
+        fyaw.setTarget(normalizeByte(yaw, PI / 6));
     }
 
     if (cmd == 'M')
@@ -253,6 +246,8 @@ bool tryMultibyte(char cmd)
 
 bool processCommands()
 {
+    tick();
+
     char incoming;
     if (Serial1.available() > 0)
         incoming = Serial1.read();
@@ -268,7 +263,6 @@ bool processCommands()
         
         command = incoming;
         lastCommandTime = millis();
-        Serial.println(commandToStr(command));
         
         return false;
     }
@@ -281,7 +275,6 @@ bool processCommands()
         
         command = incoming;
         lastCommandTime = millis();
-        Serial.println(commandToStr(command));
         
         progress = 0;
         return false;
@@ -300,7 +293,6 @@ bool processCommands()
     {
         command = incoming;
         lastCommandTime = millis();
-        Serial.println(commandToStr(command));
 
         switch (incoming)
         {
@@ -383,8 +375,6 @@ bool processCommands()
     command = incoming;
     lastCommandTime = millis();
 
-    Serial.println(commandToStr(command));
-
     tone(9, 8000, 100);
     return false;
 }
@@ -397,6 +387,6 @@ void loop()
     
 
         
-    delay(2);
-    moveGait.tick();
+//    delay(2);
+  //  moveGait.tick();
 } 

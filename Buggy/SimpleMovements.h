@@ -29,7 +29,7 @@ public:
     void shiftAbsolute(Point absolute, float pitch, float roll, float yaw)
     {
         for (unsigned char i = 0; i < _N; ++i)
-            _legs[i].delayMove(); 
+            _legs[i].delayReach();
       
         for (unsigned char i = 0; i < _N; ++i)
             _legs[i].shiftDefault(_defaultPositions[i] + absolute);
@@ -39,7 +39,7 @@ public:
         shiftYaw(yaw);
 
         for (unsigned char i = 0; i < _N; ++i)
-            _legs[i].commitDelayedMove(); 
+            _legs[i].commitDelayedReach();
     }
     
     void shift(Point delta)

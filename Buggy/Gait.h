@@ -118,6 +118,7 @@ public:
     {
         const unsigned long now = millis();
         const unsigned long deltaT = now - _lastTickTime;
+        _lastTickTime = now;
 
         int downGroupCount = 0;
 
@@ -225,8 +226,6 @@ public:
                     _groups[gi].setState(LegGroup::DOWN);
             }
         }
-
-        _lastTickTime = now;
     }
 
 private:
