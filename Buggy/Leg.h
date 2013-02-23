@@ -27,7 +27,7 @@ public:
         , _fAngle(_fServoRestAngle, _fServoRestAngle)
         , _tAngle(_tServoRestAngle, _tServoRestAngle)
         , _lastTickTime(0)
-        , _speedRadMsec(PI / 1000)
+        , _speedRadMsec((PI * 2) / 1000)
     {}
     
     void debug(bool on)

@@ -142,7 +142,7 @@ bool floatEqual(float a, float b)
 
 float normalizeByte(char b, float normal)
 {
-    return ((float) b / 128) * normal;
+    return ((float) b / 128.0) * normal;
 }
 
 #endif

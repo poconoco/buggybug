@@ -20,7 +20,7 @@ public:
 
     void rememberDefault()
     {
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
             _defaultPositions[i] = _legs[i].getDefaultPos();
 
         _linearShift.assignZero();
@@ -28,23 +28,23 @@ public:
 
     void shiftAbsolute(Point absolute, float pitch, float roll, float yaw)
     {
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
             _legs[i].delayReach();
       
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
             _legs[i].shiftDefault(_defaultPositions[i] + absolute);
             
         shiftPitch(pitch);
         shiftRoll(roll);
         shiftYaw(yaw);
 
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
             _legs[i].commitDelayedReach();
     }
     
     void shift(Point delta)
     {
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
             _legs[i].shiftDefaultRelative(delta);
         
         // TODO: Do we need to store shift in _linearShift?
@@ -55,7 +55,7 @@ public:
         float sinval = sin(angleDelta);
         float cosval = cos(angleDelta);
 
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
         {
             Point currDef = _legs[i].getDefaultPos();
             Point newDef;
@@ -72,7 +72,7 @@ public:
         float sinval = sin(angleDelta);
         float cosval = cos(angleDelta);
 
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
         {
             Point currDef = _legs[i].getDefaultPos();
             Point newDef;
@@ -89,7 +89,7 @@ public:
         float sinval = sin(angleDelta);
         float cosval = cos(angleDelta);
 
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
         {
             Point currDef = _legs[i].getDefaultPos();
             Point newDef;
@@ -106,12 +106,12 @@ public:
         const int steps = 20;
         Point currDefs[_N];
 
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
             currDefs[i] = _legs[i].getDefaultPos();
 
-        for (unsigned char si = 0; si < steps; ++si)
+        for (byte si = 0; si < steps; ++si)
         {
-            for (unsigned char i = 0; i < _N; ++i)
+            for (byte i = 0; i < _N; ++i)
             {
                 Point step = (_defaultPositions[i] - currDefs[i]) / steps;
                 _legs[i].shiftDefaultRelative(step);
@@ -121,7 +121,7 @@ public:
         }
 
         // Prevent default migration
-        for (unsigned char i = 0; i < _N; ++i)
+        for (byte i = 0; i < _N; ++i)
             _legs[i].shiftDefault(_defaultPositions[i]);
     }
 
