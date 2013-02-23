@@ -154,6 +154,13 @@ public:
         reach(_currentPos);
     }
     
+    void reachRelativeToDefaultAndRotate(Point& dest, float angle, float cx, float cy)
+    {
+        _currentPos.assign(_defaultPos + dest);
+        rotate2d(cx, cy, angle, _currentPos);
+        reach(_currentPos);
+    }
+    
     void reachRelativeToCurrent(Point& dest)
     {
         _currentPos.assign(_currentPos + dest);
