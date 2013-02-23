@@ -20,18 +20,33 @@ public:
         : _leg(NULL)
         , _cycleShift(0)
         , _stepHeight(0)
+        , _turn(false)
+        , _turnAngle(0)
+        , _turnCX(0)
+        , _turnCY(0)
     {}
 
-    void setLeg(Leg *leg)
+    void setLeg(Leg *leg, bool rightLeg)
     {
         _leg = leg;
+        _rightLeg = rightLeg;
     }
 
-    void setStep(Point start, Point stop, float height)
+    void setStep(Point start, 
+                 Point stop, 
+                 float height, 
+                 bool turn, 
+                 float turnAngle,
+                 float turnCX,
+                 float turnCY)
     {
         _start = start;
         _stop = stop;
         _stepHeight = height;
+        _turn = turn;
+        _turnAngle = turnAngle;
+        _turnCX = turnCX;
+        _turnCY = turnCY;
     }
 
     void setCycleShift(byte shift)
@@ -41,23 +56,39 @@ public:
 
     void setCyclePos(byte pos)
     {
-        Point point = cyclePoint(shiftCyclePos(pos));
-        _leg->reachRelativeToDefault(point);
+        float norm1pos;
+        float height;
+        cycle(shiftCyclePos(pos), norm1pos, height);
+        
+        Point point;
+
+        if (! _turn)
+        {
+            point.x = _start.x + (_stop.x - _start.x) * norm1pos;
+            point.y = _start.y + (_stop.y - _start.y) * norm1pos;
+            point.z = _start.z + (_stop.z - _start.z) * norm1pos + height;
+            
+            _leg->reachRelativeToDefault(point);
+         
+        }
+        else
+        {
+            point = _start;
+            point.z += height;
+            _leg->reachRelativeToDefaultAndRotate(point, _turnAngle * norm1pos, _turnCX, _turnCY);
+        }
     }
 
 private:
 
     inline byte shiftCyclePos(byte pos)
     {
-        // Hope overflow will work as rxpected here :)
+        // Hope overflow will work as expected here :)
         return pos + _cycleShift;
     }
 
-    Point cyclePoint(byte cyclePos)
+    void cycle(byte cyclePos, float& norm1pos, float& height)
     {
-        float norm1pos; // normalized to 0..1
-        float height;
-
         if (cyclePos <= CYCLE_MIDDLE)
         {
             norm1pos = static_cast<float>(cyclePos * 2) / 255;
@@ -68,14 +99,6 @@ private:
             norm1pos = static_cast<float>(CYCLE_END - ((cyclePos - CYCLE_MIDDLE) * 2)) / 255;
             height = _stepHeight * (1 - fabs(0.5 - norm1pos) * 2);
         }
-
-        Point result;
-
-        result.x = _start.x + (_stop.x - _start.x) * norm1pos;
-        result.y = _start.y + (_stop.y - _start.y) * norm1pos;
-        result.z = _start.z + (_stop.z - _start.z) * norm1pos + height;
-
-        return result;
     }
 
 private:
@@ -86,7 +109,11 @@ private:
     Point _start;
     Point _stop;
     float _stepHeight;
-
+    bool  _turn;
+    float _turnAngle;
+    float _turnCX;
+    float _turnCY;
+    bool _rightLeg;
 };
 
 class Gait2
@@ -106,7 +133,7 @@ public:
         , _doTurn(false)
     {
         for (byte i = 0; i < 6; ++i)
-            _legCycles[i].setLeg(&_legs[i]);
+            _legCycles[i].setLeg(&_legs[i], i < 3);
 
         _rightLegCycles = _legCycles;
         _leftLegCycles = _legCycles + 3;
@@ -146,39 +173,31 @@ public:
         Point direction(_directionX.getCurrent(),
                         _directionY.getCurrent(),
                         _directionZ.getCurrent());
+        
+        float cx, cy; // rotate around these points
+        float angle;
+        if (_doTurn)
+        {
+            angle = _turn.getCurrent() / 1.5;
+            
+            cx = distanceToHorde(fabs(direction.y), angle);
+            cy = 0;
+            
+            if (direction.y < 0)
+                angle *= -1;
+        }
 
         Point stepStart = direction * 0.5;
         Point stepStop = stepStart * (-1);
 
-        if (! _doTurn)
-        {
-            for (byte i = 0; i < 6; ++i)
-                _legCycles[i].setStep(stepStart, stepStop, _stepHeight);
-            return;
-        }
-
-        Point slowDown = direction * fabs(_turn.getCurrent()) * 2;
-        Point stepStartSlowLeg = (direction - slowDown) * 0.5;
-        Point stepStopSlowLeg = stepStartSlowLeg * (-1);
-
-        LegCycle* normalStepLegs;
-        LegCycle* slowStepLegs;
-        if (_turn.getCurrent() < 0)
-        {
-            normalStepLegs = _rightLegCycles;
-            slowStepLegs = _leftLegCycles;
-        }
-        else
-        {
-            normalStepLegs = _leftLegCycles;
-            slowStepLegs = _rightLegCycles;
-        }
-
-        for (byte i = 0; i < 3; ++i)
-        {
-            normalStepLegs[i].setStep(stepStart, stepStop, _stepHeight);
-            slowStepLegs[i].setStep(stepStartSlowLeg, stepStopSlowLeg, _stepHeight);
-        }
+        for (byte i = 0; i < 6; ++i)
+            _legCycles[i].setStep(stepStart,
+                                    stepStop,
+                                    _stepHeight,
+                                    _doTurn,
+                                    angle,
+                                    cx,
+                                    cy);
     }
 
     void setSpeed(float stepsPerSecond)
