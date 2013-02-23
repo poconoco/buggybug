@@ -1,7 +1,7 @@
 #include <Servo.h>
 
 #include "Leg.h"
-#include "Gait.h"
+#include "Gait2.h"
 #include "Mark1Config.h"
 #include "SimpleMovements.h"
 
@@ -10,12 +10,13 @@ static Point zero(0,0,0);
 static const int N = 6;
 static Leg legs[N];
 
-static PLeg group1Legs[3] = {&legs[0], &legs[2], &legs[4]};
-static PLeg group2Legs[3] = {&legs[1], &legs[3], &legs[5]};
-static LegGroup legGroups[2] = { LegGroup(group1Legs, 3), LegGroup(group2Legs, 3) };
+//static PLeg group1Legs[3] = {&legs[0], &legs[2], &legs[4]};
+//static PLeg group2Legs[3] = {&legs[1], &legs[3], &legs[5]};
+//static LegGroup legGroups[2] = { LegGroup(group1Legs, 3), LegGroup(group2Legs, 3) };
 
-static Gait moveGait(legGroups, 2, 1);
+//static Gait moveGait(legGroups, 2, 1);
 static SimpleMovements moveSimple(legs, N);
+static Gait2 gait(legs);
 
 static bool attached = false;
 
@@ -87,8 +88,11 @@ void setup()
 
     if (digitalRead(9) == HIGH)
         runSequence1();
+        
+    gait.setGait3x3();
+    //gait.setGaitTest();
+    //gait.
 } 
- 
  
 void runSequence1()
 {
@@ -186,6 +190,7 @@ Point bodyShift;
 
 void tick()
 {
+    gait.tick();
     for (int i = 0; i < N; i++)
         legs[i].tick();
         
@@ -204,44 +209,97 @@ void tick()
 
 bool tryMultibyte(char cmd)
 {
-    if (cmd != 'b')
-        return false;
-        
-    while (Serial1.available() < 7)
-        tick();
-        
-    char x, y, z, pitch, roll, yaw;
-    x = Serial1.read();
-    y = Serial1.read();
-    z = Serial1.read();
-    pitch = Serial1.read();
-    roll = Serial1.read();
-    yaw = Serial1.read();
-
-    // Confirm footer byte
-    char footer = Serial1.read();
-
-    if (footer != 'B')
-    {
-        return false;
-    }
-    
+    static unsigned long lastMoveCommandTime = 0;
+    const unsigned long now = millis();
+  
     if (cmd == 'b')
     {
+        while (Serial1.available() < 7)
+            tick();
+        
+        char x, y, z, pitch, roll, yaw;
+        x = Serial1.read();
+        y = Serial1.read();
+        z = Serial1.read();
+        pitch = Serial1.read();
+        roll = Serial1.read();
+        yaw = Serial1.read();
+
+        // Confirm footer byte
+        if (Serial1.read() != 'B')
+            return false;
+    
         bodyShift.x = normalizeByte(x, 20);  
         bodyShift.y = normalizeByte(y, 20);
         bodyShift.z = normalizeByte(z, 20);
         fpitch.setTarget(normalizeByte(pitch, PI / 6));
         froll.setTarget(normalizeByte(roll, PI / 6));
         fyaw.setTarget(normalizeByte(yaw, PI / 6));
+        
+        return true;
     }
-
-    if (cmd == 'M')
+    if (cmd == 'm')
     {
-        // TODO movement
+        while (Serial1.available() < 5)
+            tick();
+
+        char x,y,turn, speed;
+        
+        x = Serial1.read();
+        y = Serial1.read();
+        turn = Serial1.read();
+        speed = Serial1.read();
+        
+        // Confirm footer byte
+        if (Serial1.read() != 'M')
+            return false;
+        
+        gait.setStep(Point(normalizeByte(x, 80),
+                           normalizeByte(y, 80),
+                           0), 
+                     turn != 0, 
+                     normalizeByte(turn, 1.0));
+                     
+        if (speed < 0)
+            speed = 0;
+
+        gait.setSpeed(normalizeByte(speed, 2.0));
+        
+        return true;
+    }
+    if (cmd == 'g')
+    {
+        while (Serial1.available() < 2)
+            tick();
+
+        char gaitId = Serial1.read();
+
+        // Confirm footer byte
+        if (Serial1.read() != 'G')
+            return false;
+        
+        switch (gaitId)
+        {
+            case 1:
+                gait.setGait3x3();
+                break;
+            case 2:
+                gait.setGait6();
+                break;
+        }
+        
+        lastMoveCommandTime = now;
+        return true;
+    }
+    if (now - lastMoveCommandTime > 1000)
+    {
+        gait.setSpeed(0);
+        gait.setStep(zero, false, 0);
+        
+        lastMoveCommandTime = now + 1000000;
     }
     
-    return true;
+    return false;
 }
 
 bool processCommands()
@@ -354,7 +412,7 @@ bool processCommands()
             break;
         default:
             moved = false;
-            moveGait.stop();
+//            moveGait.stop();
     }
 
     // Command is the same, continuing

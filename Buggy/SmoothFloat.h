@@ -17,6 +17,11 @@ public:
         _target = target;
     }
 
+    float getCurrent()
+    {
+        return _current;
+    }
+
     float getCurrent(float stepDelta)
     {
         if (_current >= _target)
