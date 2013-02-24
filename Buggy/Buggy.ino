@@ -89,7 +89,7 @@ void setup()
     if (digitalRead(9) == HIGH)
         runSequence1();
         
-    gait.setGait3x3();
+    gait.setGait2x3();
     //gait.setGaitTest();
     //gait.
 } 
@@ -200,8 +200,8 @@ void tick()
     const unsigned long now = millis();
     const unsigned long deltaT = now - _lastTickTime;
     _lastTickTime = now;
-    const float angleStepDelta = ((PI / 4) / 1000) * deltaT;
-    const float shiftStepDelta = (20 / 1000) * deltaT;
+    const float angleStepDelta = ((PI * 0.25) * 0.001) * deltaT;
+    const float shiftStepDelta = (100.0 * 0.001) * deltaT;
 
     Point bodyShift(fbodyX.getCurrent(shiftStepDelta),
                     fbodyY.getCurrent(shiftStepDelta),
@@ -236,9 +236,9 @@ bool tryMultibyte(char cmd)
         if (Serial1.read() != 'B')
             return false;
 
-        fbodyX.setTarget(normalizeByte(x, 20));
-        fbodyY.setTarget(normalizeByte(y, 20));
-        fbodyZ.setTarget(normalizeByte(z, 20));
+        fbodyX.setTarget(normalizeByte(x, 40));
+        fbodyY.setTarget(normalizeByte(y, 40));
+        fbodyZ.setTarget(normalizeByte(z, 40));
         fpitch.setTarget(normalizeByte(pitch, PI / 6));
         froll.setTarget(normalizeByte(roll, PI / 6));
         fyaw.setTarget(normalizeByte(yaw, PI / 6));
@@ -288,10 +288,13 @@ bool tryMultibyte(char cmd)
         switch (gaitId)
         {
             case 1:
-                gait.setGait3x3();
+                gait.setGait2x3();
                 break;
             case 2:
-                gait.setGait6();
+                gait.setGait6x1();
+                break;
+            case 3:
+                gait.setGait3x2();
                 break;
         }
 
