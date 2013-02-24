@@ -8,10 +8,6 @@
 #include "Geometry.h"
 #include "SmoothFloat.h"
 
-#define CYCLE_MIDDLE 127
-#define CYCLE_END 255
-
-
 class LegCycle
 {
 public:
@@ -24,12 +20,28 @@ public:
         , _turnAngle(0)
         , _turnCX(0)
         , _turnCY(0)
-    {}
+    {
+        setCycleMiddle(127);
+    }
 
     void setLeg(Leg *leg, bool rightLeg)
     {
         _leg = leg;
         _rightLeg = rightLeg;
+    }
+
+    void setCycleShift(byte shift)
+    {
+        _cycleShift = shift;
+    }
+
+    void setCycleMiddle(byte middle)
+    {
+        _cycleMiddle = middle;
+        _invCycleMiddle = 1.0 / static_cast<float>(_cycleMiddle);
+
+        _cycleAfterMiddle = 255 - _cycleMiddle;
+        _invCycleAfterMiddle = 1.0 / static_cast<float>(_cycleAfterMiddle);
     }
 
     void setStep(Point start, 
@@ -47,11 +59,6 @@ public:
         _turnAngle = turnAngle;
         _turnCX = turnCX;
         _turnCY = turnCY;
-    }
-
-    void setCycleShift(byte shift)
-    {
-        _cycleShift = shift;
     }
 
     void setCyclePos(byte pos)
@@ -88,14 +95,14 @@ private:
 
     void cycle(byte cyclePos, float& norm1pos, float& height)
     {
-        if (cyclePos <= CYCLE_MIDDLE)
+        if (cyclePos <= _cycleMiddle)
         {
-            norm1pos = static_cast<float>(cyclePos * 2) / 255;
+            norm1pos = static_cast<float>(cyclePos) * _invCycleMiddle;
             height = 0.0;
         }
         else
         {
-            norm1pos = static_cast<float>(CYCLE_END - ((cyclePos - CYCLE_MIDDLE) * 2)) / 255;
+            norm1pos = static_cast<float>(_cycleAfterMiddle - (cyclePos - _cycleMiddle)) * _invCycleAfterMiddle;
             height = _stepHeight * (1 - fabs(0.5 - norm1pos) * 2);
         }
     }
@@ -104,6 +111,10 @@ private:
 
     Leg* _leg;
     byte _cycleShift;
+    byte _cycleMiddle;
+    float _invCycleMiddle;
+    byte _cycleAfterMiddle;
+    float _invCycleAfterMiddle;
 
     Point _start;
     Point _stop;
@@ -124,7 +135,7 @@ public:
         , _stepHeight(50)
         , _stepPerSecond(0, 0)
         , _lastTickTime(0)
-        , _currentCyclePos(CYCLE_MIDDLE)
+        , _currentCyclePos(0)
         , _turn(0, 0)
         , _directionX(0, 0)
         , _directionY(0, 0)
@@ -138,24 +149,45 @@ public:
         _leftLegCycles = _legCycles + 3;
     }
 
-    void setGait3x3()
+    void setGait2x3()
     {
         _legCycles[0].setCycleShift(0);
-        _legCycles[1].setCycleShift(CYCLE_MIDDLE);
+        _legCycles[1].setCycleShift(127);
         _legCycles[2].setCycleShift(0);
-        _legCycles[3].setCycleShift(CYCLE_MIDDLE);
+        _legCycles[3].setCycleShift(127);
         _legCycles[4].setCycleShift(0);
-        _legCycles[5].setCycleShift(CYCLE_MIDDLE);
+        _legCycles[5].setCycleShift(127);
+        
+        for (byte i = 0; i < 6; ++i)
+            _legCycles[i].setCycleMiddle(127);
     }
 
-    void setGait6()
+    void setGait3x2()
     {
         _legCycles[0].setCycleShift(0);
-        _legCycles[5].setCycleShift((CYCLE_END / 6) * 1);
-        _legCycles[1].setCycleShift((CYCLE_END / 6) * 2);
-        _legCycles[4].setCycleShift((CYCLE_END / 6) * 3);
-        _legCycles[2].setCycleShift((CYCLE_END / 6) * 4);
-        _legCycles[3].setCycleShift((CYCLE_END / 6) * 5);
+        _legCycles[5].setCycleShift(0);
+        
+        _legCycles[1].setCycleShift((255 / 3) * 1);
+        _legCycles[4].setCycleShift((255 / 3) * 1);
+        
+        _legCycles[2].setCycleShift((255 / 3) * 2);
+        _legCycles[3].setCycleShift((255 / 3) * 2);
+        
+        for (byte i = 0; i < 6; ++i)
+            _legCycles[i].setCycleMiddle(255 - (255 / 3));
+    }
+
+    void setGait6x1()
+    {
+        _legCycles[0].setCycleShift(0);
+        _legCycles[1].setCycleShift((255 / 6) * 1);
+        _legCycles[2].setCycleShift((255 / 6) * 2);
+        _legCycles[3].setCycleShift((255 / 6) * 3);
+        _legCycles[4].setCycleShift((255 / 6) * 4);
+        _legCycles[5].setCycleShift((255 / 6) * 5);
+        
+        for (byte i = 0; i < 6; ++i)
+            _legCycles[i].setCycleMiddle(255 - (255 / 6));
     }
 
     void setStep(Point dir, bool turn, float turnValue)
@@ -177,7 +209,7 @@ public:
         float angle;
         if (_doTurn)
         {
-            angle = _turn.getCurrent() / 1.5;
+            angle = _turn.getCurrent() * 0.7;
 
             cx = distanceToHorde(fabs(direction.y), angle);
             cy = 0;
@@ -220,11 +252,11 @@ public:
 
         tickStep();
 
-        const float cycleDelta = deltaT * ((float)CYCLE_END / 1000) * _stepPerSecond.getCurrent(speedStepDelta);
+        const float cycleDelta = deltaT * (255.0 * 0.001) * _stepPerSecond.getCurrent(speedStepDelta);
         _currentCyclePos += cycleDelta;
 
-        while (_currentCyclePos >= CYCLE_END)
-            _currentCyclePos -= CYCLE_END;
+        while (_currentCyclePos >= 255)
+            _currentCyclePos -= 255;
 
         byte currCyclePosByte = (byte) _currentCyclePos;
 
