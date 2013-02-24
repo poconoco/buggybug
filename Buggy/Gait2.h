@@ -59,7 +59,7 @@ public:
         float norm1pos;
         float height;
         cycle(shiftCyclePos(pos), norm1pos, height);
-        
+
         Point point;
 
         if (! _turn)
@@ -67,9 +67,8 @@ public:
             point.x = _start.x + (_stop.x - _start.x) * norm1pos;
             point.y = _start.y + (_stop.y - _start.y) * norm1pos;
             point.z = _start.z + (_stop.z - _start.z) * norm1pos + height;
-            
+
             _leg->reachRelativeToDefault(point);
-         
         }
         else
         {
@@ -173,16 +172,16 @@ public:
         Point direction(_directionX.getCurrent(),
                         _directionY.getCurrent(),
                         _directionZ.getCurrent());
-        
+
         float cx, cy; // rotate around these points
         float angle;
         if (_doTurn)
         {
             angle = _turn.getCurrent() / 1.5;
-            
+
             cx = distanceToHorde(fabs(direction.y), angle);
             cy = 0;
-            
+
             if (direction.y < 0)
                 angle *= -1;
         }
@@ -192,12 +191,12 @@ public:
 
         for (byte i = 0; i < 6; ++i)
             _legCycles[i].setStep(stepStart,
-                                    stepStop,
-                                    _stepHeight,
-                                    _doTurn,
-                                    angle,
-                                    cx,
-                                    cy);
+                                  stepStop,
+                                  _stepHeight,
+                                  _doTurn,
+                                  angle,
+                                  cx,
+                                  cy);
     }
 
     void setSpeed(float stepsPerSecond)
@@ -220,9 +219,6 @@ public:
         _turn.getCurrent(turnStepDelta);
 
         tickStep();
-
-        //if (_stepPerSecond < 0.001)
-        //    return;
 
         const float cycleDelta = deltaT * ((float)CYCLE_END / 1000) * _stepPerSecond.getCurrent(speedStepDelta);
         _currentCyclePos += cycleDelta;
