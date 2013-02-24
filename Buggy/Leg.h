@@ -12,7 +12,7 @@
 class Leg
 {
 public:
-    
+
     Leg()
         : _debug(false)
         , _attached(false)
@@ -29,17 +29,17 @@ public:
         , _lastTickTime(0)
         , _speedRadMsec((PI * 2) / 1000)
     {}
-    
+
     void debug(bool on)
     {
         _debug = on;
     }
-    
+
     void setPins(int coxaPin, int femurPin, int tibiaPin)
-    {         
+    {
         if (_debug)
             return;
-        
+
         _coxaPin = coxaPin;
         _femurPin = femurPin;
         _tibiaPin = tibiaPin;
@@ -48,25 +48,25 @@ public:
     void attach()
     {
         if (_attached)
-            return;      
-      
+            return;
+
         _attached = true;
         _cServo.attach(_coxaPin);
         _fServo.attach(_femurPin);
         _tServo.attach(_tibiaPin);
     }
-    
+
     void detach()
     {
         if (! _attached)
             return;
-      
+
         _attached = false;
         _cServo.detach();
         _fServo.detach();
         _tServo.detach();
     }
-    
+
     void configureCoxa(float cStartX, 
                        float cStartY,
                        float cStartAngle,
@@ -77,7 +77,7 @@ public:
         _cStartAngle = cStartAngle;
         _cFemurOffset = cFemurOffset;
     }
-        
+
     void configureFemur(float fStartZOffset,
                         float fStartFarOffset,
                         float fLength,
@@ -88,14 +88,14 @@ public:
         _fLength = fLength;
         _fStartAngle = fStartAngle;
     }
-        
+
     void configureTibia(float tLenght,
                         float tStartAngle)
     {
         _tLenght = tLenght;
         _tStartAngle = tStartAngle;
     }
-    
+
     void configureServoDirections(float cServoDirection,
                                   float fServoDirection,
                                   float tServoDirection,
@@ -106,7 +106,7 @@ public:
         _tServoDirection = tServoDirection;
         _thirdQuarterFix = thirdQuarterFix;
     }
-    
+
     void tuneRestAngles(float cServoRestAngle,
                         float fServoRestAngle,
                         float tServoRestAngle)
@@ -115,28 +115,28 @@ public:
         _fServoRestAngle = fServoRestAngle;
         _tServoRestAngle = tServoRestAngle;
     }
-    
+
     bool reset()
     {
         move(0, 0, 0);
     }
-    
+
     // Can't use reference argument here due to limitations in gcc avr
     void configureDefault(Point def, bool move)
     {
         _defaultPos = def;
         _currentPos = def;
-        
+
         if (move)
             reach(def);
     }
-    
+
     void shiftDefault(Point def)
     {
         Point delta = def - _defaultPos;
         _currentPos.assign(_currentPos + delta);
         _defaultPos = def;
-        
+
         reach(_currentPos);
     }
 
@@ -153,56 +153,56 @@ public:
         _currentPos.assign(_defaultPos + dest);
         reach(_currentPos);
     }
-    
+
     void reachRelativeToDefaultAndRotate(Point& dest, float angle, float cx, float cy)
     {
         _currentPos.assign(_defaultPos + dest);
         rotate2d(cx, cy, angle, _currentPos);
         reach(_currentPos);
     }
-    
+
     void reachRelativeToCurrent(Point& dest)
     {
         _currentPos.assign(_currentPos + dest);
         reach(_currentPos);
     }
-    
+
     void reachAbsolute(Point& dest)
     {
         _currentPos = dest;
         reach(_currentPos);
     }
-    
+
     Point getCurrentRelative()
     {
         return _currentPos - _defaultPos;
     }
-    
+
     Point& getCurrentPos()
     {
         return _currentPos;
     }
-    
+
     Point& getDefaultPos()
     {
         return _defaultPos;
     }
-    
+
     void rememberRaisePoint()
     {
         _raisePoint.assign(getCurrentRelative());
     }
-    
+
     Point& getRaisePoint()
     {
         return _raisePoint;
     }
-    
+
     void delayReach()
     {
         _delayReach = true;
     }
-    
+
     void commitDelayedReach()
     {
         _delayReach = false;
@@ -211,9 +211,10 @@ public:
 
     void tick()
     {
+#ifdef SMOOTH_ANGLES
         const unsigned long now = millis();
         const unsigned long deltaT = now - _lastTickTime;
-                
+
         _lastTickTime = now;
 
         const float stepDelta = _speedRadMsec * deltaT;
@@ -221,6 +222,7 @@ public:
         moveInternal(_cAngle.getCurrent(stepDelta),
                      _fAngle.getCurrent(stepDelta),
                      _tAngle.getCurrent(stepDelta));
+#endif
     }
 
 private:
@@ -231,14 +233,14 @@ private:
         {
             _delayedReach = dest;
             return;
-        }        
-        
+        }
+
         float hDist = sqrt( sqr(dest.x - _cStart.x) +  sqr(dest.y - _cStart.y) );
         float additionalCoxaAngle = hDist == 0.0 ? DONT_MOVE 
                                                  : asin( _cFemurOffset / hDist );
-        
+
         float primaryCoxaAngle = polarAngle(dest.x - _cStart.x, dest.y - _cStart.y, _thirdQuarterFix);
-        
+
         float cAngle = hDist == 0.0 ? DONT_MOVE 
                                     : primaryCoxaAngle - additionalCoxaAngle - _cStartAngle;
 
@@ -259,7 +261,7 @@ private:
 //            log("Can't reach!");
             return;
         }
-        
+
         // Find joint as circle intersect ( equations from http://e-maxx.ru/algo/circles_intersection & http://e-maxx.ru/algo/circle_line_intersection )
         float A = -2 * localDestX;
         float B = -2 * localDestY;
@@ -277,34 +279,38 @@ private:
         // Select solution on top as joint
         float jointLocalX = ax;
         float jointLocalY = ay;
-        
+
         float primaryFemurAngle = polarAngle(jointLocalX, jointLocalY, false);
         float fAngle = primaryFemurAngle - _fStartAngle;
-        
+
         float primaryTibiaAngle = polarAngle(localDestX - jointLocalX, localDestY - jointLocalY, false);
         float tAngle = (primaryTibiaAngle - fAngle) - _tStartAngle;
 
         move(cAngle, fAngle, tAngle);
     }
-        
+
     void move(float cAngle, float fAngle, float tAngle)
     {
+#ifdef SMOOTH_ANGLES
         _cAngle.setTarget(cAngle);
         _fAngle.setTarget(fAngle);
         _tAngle.setTarget(tAngle);
 
         tick();
+#else
+        moveInternal(cAngle, fAngle, tAngle);
+#endif
     }
 
     void moveInternal(float cAngle, float fAngle, float tAngle)
     {
         if (! _attached)
             return;
-      
+
         int mc = rad2deg(_cServoDirection * cAngle + _cServoRestAngle);
         int mf = rad2deg(_fServoDirection * fAngle + _fServoRestAngle);
         int mt = rad2deg(_tServoDirection * tAngle + _tServoRestAngle);
-        
+
         if (! _debug)
         {
             if (cAngle != DONT_MOVE)
@@ -322,15 +328,15 @@ private:
       //      log(mt);
         }
     }
-    
+
     int coxaLimit(int x)
     {
         const int cMin = 90 - 70;
         const int cMax = 90 + 70;
-      
+
         if (x < cMin) return cMin;
         if (x > cMax) return cMax;
-        
+
         return x;
     }
 
@@ -338,10 +344,10 @@ private:
     {
         const int fMin = 90 - 70;
         const int fMax = 90 + 70;
-      
+
         if (x < fMin) return fMin;
         if (x > fMax) return fMax;
-        
+
         return x;
     }
 
@@ -349,20 +355,19 @@ private:
     {
         const int tMin = 90 - 70;
         const int tMax = 90 + 70;
-      
+
         if (x < tMin) return tMin;
         if (x > tMax) return tMax;
-        
+
         return x;
     }
 
-    
 private:
     bool _debug;
-    
+
     // 3dof leg has Coxa, Femur and Tibia segments and joints.
     // Coxa is nearest to the body, Tibia is farthest.
-    
+
     // Config
     Point _cStart;             // Coordinates of the Coxa start point
     float _cStartAngle;        // Angle where Coxa is pointed to when relaxed
@@ -383,13 +388,13 @@ private:
     float _cServoDirection;
     float _fServoDirection;
     float _tServoDirection;
-      
+
     Point _raisePoint;
     Point _defaultPos;  
     Point _currentPos;
     bool _attached;
     bool _thirdQuarterFix;
-  
+
     int _coxaPin;
     int _femurPin;
     int _tibiaPin;
@@ -397,7 +402,7 @@ private:
     // Delayed move
     bool _delayReach;
     Point _delayedReach;
-    
+
     // Arduino servos
     Servo _cServo;
     Servo _fServo;
@@ -409,7 +414,7 @@ private:
     SmoothFloat _fAngle;
     SmoothFloat _tAngle;
     float _speedRadMsec;
-    
+
 };
 
 typedef Leg* PLeg;
