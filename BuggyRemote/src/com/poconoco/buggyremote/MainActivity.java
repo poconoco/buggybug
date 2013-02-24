@@ -265,14 +265,14 @@ public class MainActivity extends Activity {
 					if (y > bodyShiftArea.getHeight())
 						y = bodyShiftArea.getHeight();
 					
-					x = (x * 2 / bodyShiftArea.getWidth()) - 1;
-					y = -((y * 2 / bodyShiftArea.getHeight()) - 1);
+					x = -((x * 2 / bodyShiftArea.getWidth()) - 1);
+					y =  ((y * 2 / bodyShiftArea.getHeight()) - 1);
 				
-					bodyShift.x = (byte)(x * 128);
+					bodyShift.x = (byte)(x * 127);
 					if (checkBoxHorizShift.isChecked())
-						bodyShift.y = (byte)(y * 128);
+						bodyShift.y = (byte)(y * 127);
 					else
-						bodyShift.z = (byte)(y * 128);
+						bodyShift.z = (byte)(y * 127);
 	
 	        		movementHint.setText(bodyShift.x + ":" + bodyShift.y + ":" + bodyShift.z);
 				}
