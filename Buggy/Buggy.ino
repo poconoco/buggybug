@@ -65,120 +65,10 @@ void setup()
    
     for (Leg* leg = legs; leg < legs + N; leg++)
         leg->reachRelativeToDefault(zero);
-
-/*
-  moveSimple.walk(4, Point(0, 80, 50));
-  moveSimple.walk(4, Point(-70, 0, 50));
-  moveSimple.walk(4, Point(0, -80, 50));
-  moveSimple.walk(4, Point(70, 0, 50));
-
-  moveSimple.walk(2, Point(60, 60, 50));
-  moveSimple.walk(2, Point(-60, 60, 50));
-  moveSimple.walk(2, Point(-60, -60, 50));
-  moveSimple.walk(2, Point(60, -60, 50));
-
-  moveSimple.smoothTo(zero);
-
-*/
-
-  
-/*  for (int i = 0; i < N; i++)
-    legs[i].detach();
-*/
-
-    if (digitalRead(9) == HIGH)
-        runSequence1();
         
     gait.setGait2x3();
-    //gait.setGaitTest();
-    //gait.
 } 
- 
-void runSequence1()
-{
-    attachAll();
-    moveSimple.shiftReset();
-
-    moveSimple.walk(4, Point(0, 80, 50));
-    moveSimple.smoothTo(zero);
-
-    const int dt = 2;
-    const float da = PI / 300;
-    const float dh = 1.0;
-    const int iterations = 30;
-
-    for (int i = 0; i < iterations; ++i)
-    {
-        moveSimple.shiftRoll(- da);
-        delay(dt);
-    }
-    
-    for (int i = 0; i < iterations; ++i)
-    {
-        moveSimple.shiftPitch(- da);
-        delay(dt);
-    }
-    
-    for (int i = 0; i < iterations * 2; ++i)
-    {
-        moveSimple.shiftRoll(da);
-        delay(dt);
-    }
-        
-    for (int i = 0; i < iterations * 2; ++i)
-    {
-        moveSimple.shiftPitch(da);
-        delay(dt);
-    }
-    
-    for (int i = 0; i < iterations; ++i)
-    {
-        moveSimple.shiftPitch(- da);
-        moveSimple.shiftRoll(- da);
-        delay(dt);
-    }
-    
-    moveSimple.shiftReset();
- 
-    moveSimple.walk(8, Point(0, 80, 50));
-    
-    moveSimple.smoothTo(zero);
-    moveSimple.rotate(11, 1.0);
-
-    moveSimple.smoothTo(zero);
-    
-    for (int i = 0; i < iterations * 4; ++i)
-    {
-        moveSimple.shift(Point(0,0, dh));
-        delay(dt);
-    }
-    for (int i = 0; i < iterations * 5; ++i)
-    {
-        moveSimple.shift(Point(0,0, -dh));
-        delay(dt);
-    }
-    
-    moveSimple.walk(8, Point(0, 80, 50));
-    moveSimple.shiftReset();
-    
-
-    moveSimple.smoothTo(zero);
-    moveSimple.walk(2, Point(70, 0, 50));
-    moveSimple.smoothTo(zero);
-    moveSimple.walk(4, Point(-70, 0, 50));
-    moveSimple.smoothTo(zero);
-    moveSimple.walk(2, Point(70, 0, 50));
-    
-    moveSimple.smoothTo(zero);
-    moveSimple.walk(4, Point(0, 80, 50));
-    
-    moveSimple.smoothTo(zero);
-    moveSimple.rotate(11, 1.0);
-    
-    detachAll();
-      
-}
- 
+  
 char command = 0;
 unsigned long lastCommandTime = 0;
 static float progress = 0; 
@@ -193,15 +83,17 @@ SmoothFloat fbodyZ(0,0);
 void tick()
 {
     gait.tick();
+    
+#ifdef SMOOTH_ANGLES
     for (int i = 0; i < N; i++)
         legs[i].tick();
+#endif
 
     static unsigned long _lastTickTime = 0;
     const unsigned long now = millis();
     const unsigned long deltaT = now - _lastTickTime;
-    _lastTickTime = now;
-    const float angleStepDelta = ((PI * 0.25) * 0.001) * deltaT;
-    const float shiftStepDelta = (100.0 * 0.001) * deltaT;
+    const float angleStepDelta = ((PI * 0.25) * 0.001) * (float) deltaT;
+    const float shiftStepDelta = (100.0 * 0.001) * (float) deltaT;
 
     Point bodyShift(fbodyX.getCurrent(shiftStepDelta),
                     fbodyY.getCurrent(shiftStepDelta),
@@ -212,6 +104,8 @@ void tick()
         fpitch.getCurrent(angleStepDelta),
         froll.getCurrent(angleStepDelta),
         fyaw.getCurrent(angleStepDelta));
+
+    _lastTickTime = now;
 }
 
 bool tryMultibyte(char cmd)
@@ -334,96 +228,10 @@ bool processCommands()
 
         return false;
     }
-    else if (incoming == 'z' || incoming == '0')
-    {
-        moveSimple.smoothTo(zero);
-        tone(9, 2000, 100);
-        if (incoming == '0')
-            runSequence1();
-
-        command = incoming;
-        lastCommandTime = millis();
-
-        progress = 0;
-        return false;
-    }
-    else if (incoming == 'r' ||
-             incoming == 'f' ||
-             incoming == 't' ||
-             incoming == 'g' ||
-             incoming == 'y' ||
-             incoming == 'h' ||
-             incoming == 'u' ||
-             incoming == 'j' ||
-             incoming == 'i' ||
-             incoming == 'k' ||
-             incoming == 'x')
-    {
-        command = incoming;
-        lastCommandTime = millis();
-
-        switch (incoming)
-        {
-            case 'r': moveSimple.shift(Point( 0,  0, -2)); break;
-            case 'f': moveSimple.shift(Point( 0,  0,  2)); break;
-
-            case 'y': moveSimple.shift(Point( 0, -2,  0)); break;
-            case 'h': moveSimple.shift(Point( 0,  2,  0)); break;
-            case 'g': moveSimple.shift(Point( 2,  0,  0)); break;
-            case 'j': moveSimple.shift(Point(-2,  0,  0)); break;
-
-            case 't': moveSimple.shiftRoll(- (PI / 100)); break;
-            case 'u': moveSimple.shiftRoll(+ (PI / 100)); break;
-            case 'i': moveSimple.shiftPitch(+ (PI / 100)); break;
-            case 'k': moveSimple.shiftPitch(- (PI / 100)); break;
-
-            case 'x': moveSimple.shiftReset(); break;
-        }
-
-        return false;
-    }
-
 
     static char lastMoveCommand = 0;
     static char lastCommand = 0;
     bool moved = true;
-
-    switch(command)
-    {
-        case 'w':
-            progress = moveSimple.walk(1, Point(0, 80, 70), progress, NULL);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(0, 30, 0));
-            break;
-        case 's':
-            progress = moveSimple.walk(1, Point(0, -80, 70), progress, NULL);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(0, -30, 0));
-            break;
-        case 'a':
-            progress = moveSimple.walk(1, Point(-70, 0, 70), progress, NULL);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(-20, 0, 0));
-            break;
-        case 'd':
-            progress = moveSimple.walk(1, Point(70, 0, 70), progress, NULL);
-            //if (lastCommand != command)
-            //    moveGait.updateMovementDirect(Point(20, 0, 0));
-            break;
-        case 'e':
-            if (lastMoveCommand != command)
-                moveSimple.smoothTo(zero);
-            progress = moveSimple.rotate(1, 1.0, progress, NULL);
-            break;
-        case 'q':
-            if (lastMoveCommand != command)
-                moveSimple.smoothTo(zero);
-            progress = moveSimple.rotate(1, -1.0, progress, NULL);
-            break;
-        default:
-            moved = false;
-//            moveGait.stop();
-    }
 
     // Command is the same, continuing
     if (incoming == command)

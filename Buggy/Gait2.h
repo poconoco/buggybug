@@ -242,9 +242,9 @@ public:
         const unsigned long deltaT = now - _lastTickTime;
         _lastTickTime = now;
 
-        const float speedStepDelta = 0.01 * deltaT;
-        const float directionStepDelta = 0.1 * deltaT;
-        const float turnStepDelta = 0.01 * deltaT;
+        const float speedStepDelta = 0.01 * (float) deltaT;
+        const float directionStepDelta = 0.1 * (float) deltaT;
+        const float turnStepDelta = 0.01 * (float) deltaT;
         _directionX.getCurrent(directionStepDelta);
         _directionY.getCurrent(directionStepDelta);
         _directionZ.getCurrent(directionStepDelta);

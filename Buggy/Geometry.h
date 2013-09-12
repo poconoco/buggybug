@@ -34,10 +34,10 @@ float polarAngle(float x, float y, bool thirdQuarterFix)
 
     // x = 0
     if (y > 0)
-        return PI / 2;
+        return PI * 0.5;
 
     if (y < 0)
-        return PI / -2;
+        return PI * -0.5;
 
     // y = 0
     return 0;
@@ -142,13 +142,13 @@ bool floatEqual(float a, float b)
 
 float normalizeByte(char b, float normal)
 {
-    return ((float) b / 128.0) * normal;
+    return ((float) b) * normal * 0.0078125; // * (1 / 128.0);
 }
 
 float distanceToHorde(float hordeLength,
                       float hordeAngle)
 {
-    return (hordeLength / 2) / tan(hordeAngle / 2);
+    return (hordeLength * 0.5) / tan(hordeAngle * 0.5);
 }
 
 void rotate2d(float cx, float cy, float angle, Point& p)
