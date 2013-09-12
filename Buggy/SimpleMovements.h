@@ -9,13 +9,6 @@ public:
         , _N(N)
     {
         _speedFactor = 0.025;
-//        _speedFactor = 0.05;
-  //      _defaultPositions = new Point[_N];
-    }
-
-    ~SimpleMovements()
-    {
-//        delete[] _defaultPositions;
     }
 
     void rememberDefault()
@@ -125,61 +118,6 @@ public:
             _legs[i].shiftDefault(_defaultPositions[i]);
     }
 
-    float walk(int steps, Point direction, float startProgress = 0, bool (*pContinue)() = NULL)
-    {
-        float p = startProgress;
-        for (int i = 0; i < steps; i++)
-        {
-            for(; p <= 2; /*p += 0.025*/)
-            {
-                float progress; 
-                float height1;
-                float height2;
-                if (p < 1) 
-                {
-                    progress = p;
-                    height1 = 0;
-                    height2 = direction.z * (0.5 - fabs(0.5 - p));
-                }
-                else 
-                {
-                    progress = 1 - (p - 1);
-                    height1 = direction.z * (0.5 - fabs(1.5 - p));
-                    height2 = 0;
-                }
-              
-                Point group1(- direction.x / 2 + (direction.x - progress * direction.x),
-                             - direction.y / 2 + (direction.y - progress * direction.y),
-                             height1);
-                Point group2(- direction.x / 2 + progress * direction.x,
-                             - direction.y / 2 + progress * direction.y,
-                             height2);
-    
-                if (_legs[0].getCurrentRelative().maxDistance(group1) > 10)
-                    smoothTo(group1, 0);
-                if (_legs[1].getCurrentRelative().maxDistance(group2) > 10)
-                    smoothTo(group2, 1);
-                        
-                for (int li = 0; li < _N; li+=2)
-                {
-                    _legs[li].reachRelativeToDefault(group1);                  
-                    _legs[li + 1].reachRelativeToDefault(group2);                  
-                }
-    
-                delay(1);
-                if (pContinue != NULL && ! pContinue())
-                    return p;
-                    
-                p += _speedFactor /*+ 0.04 * (0.5 - fabs(0.5 - progress))*/;
-            }
-    
-            if (p > 2)
-                p = 0;        
-        }
-        
-        return p;
-    }
-    
     float rotate(int steps, float clockwise, float startProgress = 0, bool (*pContinue)() = NULL)
     {
         float p = startProgress;

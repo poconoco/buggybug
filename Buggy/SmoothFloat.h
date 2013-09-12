@@ -22,22 +22,20 @@ public:
         return _current;
     }
 
-    float getCurrent(float stepDelta)
+    float getCurrent(float stepDeltaOrig)
     {
+        float stepDelta;
+        const float dist = abs(_current - _target);
+        if (dist < stepDeltaOrig * 5)
+            stepDelta = stepDeltaOrig * 0.2;
+        else if (dist < stepDeltaOrig * 2)
+            stepDelta = stepDeltaOrig * 0.1;
+        else stepDelta = stepDeltaOrig;
+      
         if (_current >= _target)
-        {
-            if (_current - _target <= stepDelta)
-                _current = _target;
-            else
-                _current -= stepDelta;
-        }
+            _current = max(_target, _current - stepDelta);
         else
-        {
-            if (_target - _current <= stepDelta)
-                _current = _target;
-            else
-                _current += stepDelta;
-        }
+            _current = min(_target, _current + stepDelta);
 
         return _current;
     }
