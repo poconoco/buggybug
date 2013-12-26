@@ -1,26 +1,29 @@
-//#define IOSTREAM_DEBUG
-
-#ifdef IOSTREAM_DEBUG  
-#include <iostream>
-#else
 #include <Servo.h> 
-#endif
 #include <math.h>
 
 #define sqr(x) ((x) * (x))
 
-#ifndef IOSTREAM_DEBUG  
 Servo hips[8];  // Бёдра
 Servo shins[8]; // Голени
 
 int hipsTune[8];
 int shinsTune[8];
-#endif
 
 const float hipLength  = 32;
 const float shinLength = 40;
 const float hipStartAngle = - M_PI / 2.0;
 const float shinStartAngle = - 3.0 * M_PI / 4.0;
+
+enum State
+{
+  STOP,
+  FORWARD,
+  BACKWARD,
+  FORWARD_RIGHT,
+  FORWARD_LEFT
+};
+
+State state = STOP;
 
 void hipsWrite(int idx, int val)
 {
@@ -34,7 +37,6 @@ void shinsWrite(int idx, int val)
 
 void attachLegs()
 {
-#ifndef IOSTREAM_DEBUG  
   hips [0].attach(30); hips [1].attach(45);
   shins[0].attach(31); shins[1].attach(44);
   hips [2].attach(32); hips [3].attach(43);
@@ -49,32 +51,29 @@ void attachLegs()
   hipsTune[4] = 17; hipsTune[5] = 0;
   hipsTune[6] = 4; hipsTune[7] = 0;
 
-  shinsTune[0] = 0; shinsTune[1] = -10;
-  shinsTune[2] = 20; shinsTune[3] = 0;
-  shinsTune[4] = 5; shinsTune[5] = 5;
-  shinsTune[6] = 0; shinsTune[7] = 0;
-#endif
+  shinsTune[0] = 0; shinsTune[1] = -3;
+  shinsTune[2] = 20; shinsTune[3] = 7;
+  shinsTune[4] = 5; shinsTune[5] = 12;
+  shinsTune[6] = 0; shinsTune[7] = 7;
 }
 
 void detachLegs()
 {
-#ifndef IOSTREAM_DEBUG  
   for (int i = 0; i < 8; ++i)
   {
     hips[i].detach();
     shins[i].detach();
   }
-#endif
 }
 
 void resetLegs()
 {
+  int d = 20;
+  
   for (int i = 0; i < 8; i++)
   {
-#ifndef IOSTREAM_DEBUG
     hipsWrite(i, 90);
-    shinsWrite(i, 90);
-#endif
+    shinsWrite(i, 90 + ((i % 2) ? d : -d));
   }
 }
 
@@ -102,29 +101,17 @@ float polarAngle(float x, float y)
 
 void legWrite(float hipAngleRad, float shinAngleRad, int legIndex)
 {
-#ifdef IOSTREAM_DEBUG  
-  std::cout << std::endl;
-  std::cout << "hip rad: " << hipAngleRad << std::endl;
-  std::cout << "shin rad: " << shinAngleRad << std::endl;
-#endif
-
+  if (state == FORWARD_RIGHT && (legIndex % 2) == 1)
+      return;
+  
+  if (state == FORWARD_LEFT && (legIndex % 2) != 1)
+      return;
+  
   float hipAngle = hipAngleRad * 180.0 / M_PI + 90;
   float shinAngle = shinAngleRad * 180.0 / M_PI + 90;
 
-#ifdef IOSTREAM_DEBUG  
-  std::cout << std::endl;
-  std::cout << "hip deg: " << hipAngle << std::endl;
-  std::cout << "shin deg: " << shinAngle << std::endl;
-#endif
-  
-#ifndef IOSTREAM_DEBUG
   hipsWrite(legIndex, ! (legIndex % 2) ? hipAngle  : (180 - hipAngle));
   shinsWrite(legIndex, ! (legIndex % 2) ? (180 - shinAngle) : shinAngle);
-#else
-  std::cout << std::endl;
-  std::cout << ((legIndex % 2) ? hipAngle : (180 - hipAngle)) << std::endl;
-  std::cout << ((legIndex % 2) ? (180 - shinAngle) : shinAngle) << std::endl;
-#endif
 }
 
 void legsReachTo(float x, float y, int legGroup)
@@ -171,9 +158,9 @@ void legsReachTo(float x, float y, int legGroup)
   }
 }
 
-void stepForward(float height, float deltaHeight)
+void stepForward(float height, float deltaHeight, float xamp, float xshift)
 {
-  for (float i = 0; i < 200; i += 1.5)
+  for (float i = 0; i < 200; i += 2.5)
   {
     float dx1 = + 10.0 - (float) i / 10;
     float dx2 = - 10.0 + (float) i / 10;
@@ -181,13 +168,13 @@ void stepForward(float height, float deltaHeight)
     float dhNormal = abs(dx1) / 10.0;
     float dh = deltaHeight * dhNormal;
     
-    legsReachTo(dx1, - height, 0);
-    legsReachTo(dx2, - (height - deltaHeight + dh), 1);
+    legsReachTo(dx1 * xamp + xshift, - height, 0);
+    legsReachTo(dx2 * xamp + xshift, - (height - deltaHeight + dh), 1);
     
     delay(1);
   }
   
-  for (float i = 0; i < 200; i += 1.5)
+  for (float i = 0; i < 200; i += 2.5)
   {
     float dx1 = + 10.0 - (float) i / 10;
     float dx2 = - 10.0 + (float) i / 10;
@@ -195,8 +182,8 @@ void stepForward(float height, float deltaHeight)
     float dhNormal = abs(dx1) / 10.0;
     float dh = deltaHeight * dhNormal;
     
-    legsReachTo(dx1, - height, 1);
-    legsReachTo(dx2, - (height - deltaHeight + dh), 0);
+    legsReachTo(dx1 * xamp + xshift, - height, 1);
+    legsReachTo(dx2 * xamp + xshift, - (height - deltaHeight + dh), 0);
     
     delay(1);
   }
@@ -204,38 +191,60 @@ void stepForward(float height, float deltaHeight)
 
 void setup() 
 { 
+  Serial1.begin(9600);
+
   attachLegs();
-  
-  //resetLegs();
-  
-//  legsReachTo(-0, -60, 0);
-//  legsReachTo(-0, -60, 1);
-#ifndef IOSTREAM_DEBUG
- // delay(300);
-#endif
-
-  for (int i = 0; i < 6; ++i)
-    stepForward(70, 16);
-
-/*  for (int i = 0; i < 200; ++i)
-  {
-    
-#ifndef IOSTREAM_DEBUG
-    delay(1);
-#endif
-  }*/
-  
-  delay(200);
+  resetLegs();
+  delay(300);
   detachLegs();
 } 
 
-void loop() {}
-
-#ifdef IOSTREAM_DEBUG
-int main()
+void loop() 
 {
-  setup();
-  return 0;
+  float xamp = 1.5;
+  float xshift = 5;
+  
+  float h = 66;
+  float dh = 16;
+
+  switch (state)
+  {
+    case FORWARD:    
+    case FORWARD_RIGHT:    
+    case FORWARD_LEFT:    
+      attachLegs();
+      stepForward(h, dh, xamp, xshift);
+      detachLegs();
+      break;
+    case BACKWARD:
+      attachLegs();
+      stepForward(h, dh, - xamp, xshift);
+      detachLegs();
+      break;
+  }
+  
+  char command;
+  
+  while (Serial1.available())
+    command = Serial1.read();
+    
+  switch (command)
+  {
+    case 'w':
+      state = FORWARD;
+      break;
+    case 's':
+      state = BACKWARD;
+      break;
+    case 'd':
+      state = FORWARD_RIGHT;
+      break;
+    case 'a':
+      state = FORWARD_LEFT;
+      break;
+    default:
+      state = STOP;
+  }
 }
-#endif
+
 
