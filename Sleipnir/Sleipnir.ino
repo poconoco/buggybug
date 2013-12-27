@@ -132,9 +132,8 @@ void legsReachTo(float x, float y, int legGroup)
   ay = Y0 - A * mult;
   by = Y0 + A * mult;
 
-  // Select solution on top as joint
-  float jointLocalX = ax;
-  float jointLocalY = ay;
+  float jointLocalX = ax; // или bx для другой точки пересечения
+  float jointLocalY = ay; // или by для другой точки пересечения
 
   float hipPrimaryAngle  = polarAngle(jointLocalX, jointLocalY);
   float hipAngle = hipPrimaryAngle - hipStartAngle;
@@ -160,33 +159,37 @@ void legsReachTo(float x, float y, int legGroup)
 
 void stepForward(float height, float deltaHeight, float xamp, float xshift)
 {
+  attachLegs();
+
   for (float i = 0; i < 200; i += 2.5)
   {
     float dx1 = + 10.0 - (float) i / 10;
     float dx2 = - 10.0 + (float) i / 10;
-    
+
     float dhNormal = abs(dx1) / 10.0;
     float dh = deltaHeight * dhNormal;
-    
+
     legsReachTo(dx1 * xamp + xshift, - height, 0);
     legsReachTo(dx2 * xamp + xshift, - (height - deltaHeight + dh), 1);
-    
+
+    delay(1);
+  }
+
+  for (float i = 0; i < 200; i += 2.5)
+  {
+    float dx1 = + 10.0 - (float) i / 10;
+    float dx2 = - 10.0 + (float) i / 10;
+
+    float dhNormal = abs(dx1) / 10.0;
+    float dh = deltaHeight * dhNormal;
+
+    legsReachTo(dx1 * xamp + xshift, - height, 1);
+    legsReachTo(dx2 * xamp + xshift, - (height - deltaHeight + dh), 0);
+
     delay(1);
   }
   
-  for (float i = 0; i < 200; i += 2.5)
-  {
-    float dx1 = + 10.0 - (float) i / 10;
-    float dx2 = - 10.0 + (float) i / 10;
-    
-    float dhNormal = abs(dx1) / 10.0;
-    float dh = deltaHeight * dhNormal;
-    
-    legsReachTo(dx1 * xamp + xshift, - height, 1);
-    legsReachTo(dx2 * xamp + xshift, - (height - deltaHeight + dh), 0);
-    
-    delay(1);
-  }
+  detachLegs();
 }
 
 void setup() 
@@ -209,39 +212,27 @@ void loop()
 
   switch (state)
   {
-    case FORWARD:    
-    case FORWARD_RIGHT:    
-    case FORWARD_LEFT:    
-      attachLegs();
-      stepForward(h, dh, xamp, xshift);
-      detachLegs();
-      break;
+    case FORWARD:
+    case FORWARD_RIGHT:
+    case FORWARD_LEFT:
+      stepForward(h, dh, xamp, xshift); break;
     case BACKWARD:
-      attachLegs();
-      stepForward(h, dh, - xamp, xshift);
-      detachLegs();
-      break;
+      stepForward(h, dh, - xamp, xshift); break;
   }
-  
+
   char command;
-  
   while (Serial1.available())
     command = Serial1.read();
-    
   switch (command)
   {
     case 'w':
-      state = FORWARD;
-      break;
+      state = FORWARD; break;
     case 's':
-      state = BACKWARD;
-      break;
+      state = BACKWARD; break;
     case 'd':
-      state = FORWARD_RIGHT;
-      break;
+      state = FORWARD_RIGHT; break;
     case 'a':
-      state = FORWARD_LEFT;
-      break;
+      state = FORWARD_LEFT; break;
     default:
       state = STOP;
   }
