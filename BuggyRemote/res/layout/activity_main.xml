@@ -86,18 +86,24 @@
                 </LinearLayout>
 
                 <Button
+                    android:id="@+id/buttonGait1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="2x3" />
+                            
+                <Button
                     android:id="@+id/buttonGait2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="6x1" />
 
                 <Button
-                    android:id="@+id/buttonGait1"
+                    android:id="@+id/buttonGait3"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="2x3" />
-
-            </LinearLayout>
+                    android:text="3x2" />
+                
+                </LinearLayout>
 
             <LinearLayout
                 android:layout_width="200dp"
