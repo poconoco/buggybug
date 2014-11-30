@@ -67,7 +67,7 @@ public:
         _tServo.detach();
     }
 
-    void configureCoxa(float cStartX, 
+    void configureCoxa(float cStartX,
                        float cStartY,
                        float cStartAngle,
                        float cFemurOffset)
@@ -236,19 +236,19 @@ private:
         }
 
         float hDist = sqrt( sqr(dest.x - _cStart.x) +  sqr(dest.y - _cStart.y) );
-        float additionalCoxaAngle = hDist == 0.0 ? DONT_MOVE 
+        float additionalCoxaAngle = hDist == 0.0 ? DONT_MOVE
                                                  : asin( _cFemurOffset / hDist );
 
         float primaryCoxaAngle = polarAngle(dest.x - _cStart.x, dest.y - _cStart.y, _thirdQuarterFix);
 
-        float cAngle = hDist == 0.0 ? DONT_MOVE 
+        float cAngle = hDist == 0.0 ? DONT_MOVE
                                     : primaryCoxaAngle - additionalCoxaAngle - _cStartAngle;
 
         // Moving to local Coxa-Femur-target coordinate system
         // Note the case when hDist <= _cFemurOffset. This is for the blind zone.
         // We never can't reach the point that is nearer to the _cStart then
         // femur offset (_fStartFarOffset)
-        float localDestX = hDist <= _cFemurOffset 
+        float localDestX = hDist <= _cFemurOffset
             ? - _fStartFarOffset
             : sqrt(sqr(hDist) - sqr(_cFemurOffset)) - _fStartFarOffset;
 
@@ -315,7 +315,7 @@ private:
         {
             if (cAngle != DONT_MOVE)
                 _cServo.write(coxaLimit(mc));
-            if (fAngle != DONT_MOVE)    
+            if (fAngle != DONT_MOVE)
                 _fServo.write(femurLimit(mf));
             if (tAngle != DONT_MOVE)
                 _tServo.write(tibiaLimit(mt));
@@ -379,7 +379,7 @@ private:
     float _tLenght;            // Tibia length
     float _tStartAngle;
 
-    // Servo rest angles are for fine tune of angles. By default it is pi/2 
+    // Servo rest angles are for fine tune of angles. By default it is pi/2
     float _cServoRestAngle;
     float _fServoRestAngle;
     float _tServoRestAngle;
@@ -390,7 +390,7 @@ private:
     float _tServoDirection;
 
     Point _raisePoint;
-    Point _defaultPos;  
+    Point _defaultPos;
     Point _currentPos;
     bool _attached;
     bool _thirdQuarterFix;
@@ -420,4 +420,3 @@ private:
 typedef Leg* PLeg;
 
 #endif
-

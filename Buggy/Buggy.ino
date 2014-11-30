@@ -2,7 +2,7 @@
 
 #include "Leg.h"
 #include "Gait2.h"
-#include "Mark1Config.h"
+#include "Mark2Config.h"
 #include "SimpleMovements.h"
 
 static Point zero(0,0,0);
@@ -56,9 +56,6 @@ void setup()
 {
     Serial.begin(9600);
     Serial1.begin(9600);
-    Serial1.println("ksjfhksjd skdhf kjsdhfueyeyrueryeuu  iw ksjh skfd ");
-  
-    Serial.println("setup()");
     
     LegConfiguration::apply(legs, N);
     moveSimple.rememberDefault();
@@ -66,7 +63,7 @@ void setup()
     for (Leg* leg = legs; leg < legs + N; leg++)
         leg->reachRelativeToDefault(zero);
         
-    gait.setGait2x3();
+    gait.setGait6x1();
 } 
   
 char command = 0;
@@ -155,8 +152,8 @@ bool tryMultibyte(char cmd)
         if (Serial1.read() != 'M')
             return false;
 
-        gait.setStep(Point(normalizeByte(x, 80),
-                           normalizeByte(y, 80),
+        gait.setStep(Point(normalizeByte(x, 40),
+                           normalizeByte(y, 40),
                            0), 
                      turn != 0, 
                      normalizeByte(turn, 1.0));
