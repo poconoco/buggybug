@@ -4,42 +4,62 @@
 class SimpleMovements
 {
 public:
-    SimpleMovements(Leg* legs, int N)
+    SimpleMovements(Leg* legs, int legCount, Leg* mandibles, int mandibleCount)
         : _legs(legs)
-        , _N(N)
+        , _legCount(legCount)
+        , _mandibles(mandibles)
+        , _mandibleCount(mandibleCount)
     {
+        _defaultPositions = new Point[_legCount];
+        _defaultMandiblePositions = new Point[_mandibleCount];
+
         _speedFactor = 0.025;
+    }
+
+    ~SimpleMovements()
+    {
+        delete _defaultPositions;
+        delete _defaultMandiblePositions;
     }
 
     void rememberDefault()
     {
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
             _defaultPositions[i] = _legs[i].getDefaultPos();
+
+        for (byte i = 0; i < _mandibleCount; ++i)
+            _defaultMandiblePositions[i] = _mandibles[i].getDefaultPos();
 
         _linearShift.assignZero();
     }
 
-    void shiftAbsolute(Point absolute, float pitch, float roll, float yaw)
+    void shiftAbsolute(Point& absolute, float pitch, float roll, float yaw)
     {
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
             _legs[i].delayReach();
-      
-        for (byte i = 0; i < _N; ++i)
+
+        for (byte i = 0; i < _legCount; ++i)
             _legs[i].shiftDefault(_defaultPositions[i] + absolute);
-            
+
         shiftPitch(pitch);
         shiftRoll(roll);
         shiftYaw(yaw);
 
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
             _legs[i].commitDelayedReach();
     }
-    
-    void shift(Point delta)
+
+    void mandiblesReach(Point right, Point left)
     {
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _mandibleCount; ++i)
+            _mandibles[i].shiftDefault(_defaultMandiblePositions[i] + ((i % 2) ? left : right));
+    }
+
+    void shift(Point& delta)
+    {
+        for (byte i = 0; i < _legCount; ++i)
             _legs[i].shiftDefaultRelative(delta);
-        
+
         // TODO: Do we need to store shift in _linearShift?
     }
 
@@ -48,7 +68,7 @@ public:
         float sinval = sin(angleDelta);
         float cosval = cos(angleDelta);
 
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
         {
             Point currDef = _legs[i].getDefaultPos();
             Point newDef;
@@ -65,7 +85,7 @@ public:
         float sinval = sin(angleDelta);
         float cosval = cos(angleDelta);
 
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
         {
             Point currDef = _legs[i].getDefaultPos();
             Point newDef;
@@ -82,7 +102,7 @@ public:
         float sinval = sin(angleDelta);
         float cosval = cos(angleDelta);
 
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
         {
             Point currDef = _legs[i].getDefaultPos();
             Point newDef;
@@ -93,18 +113,18 @@ public:
             _legs[i].shiftDefault(newDef);
         }
     }
-    
+
     void shiftReset()
     {
         const int steps = 20;
-        Point currDefs[_N];
+        Point currDefs[_legCount];
 
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
             currDefs[i] = _legs[i].getDefaultPos();
 
         for (byte si = 0; si < steps; ++si)
         {
-            for (byte i = 0; i < _N; ++i)
+            for (byte i = 0; i < _legCount; ++i)
             {
                 Point step = (_defaultPositions[i] - currDefs[i]) / steps;
                 _legs[i].shiftDefaultRelative(step);
@@ -114,7 +134,7 @@ public:
         }
 
         // Prevent default migration
-        for (byte i = 0; i < _N; ++i)
+        for (byte i = 0; i < _legCount; ++i)
             _legs[i].shiftDefault(_defaultPositions[i]);
     }
 
@@ -125,13 +145,13 @@ public:
         {
             for(; p <= 2; /*p += 0.025*/)
             {
-                float progress; 
+                float progress;
                 float h[2]; // height
                 float s[2]; // sine
                 float c[2]; // cosine
                 const float angle = clockwise * (PI / 500);
-    
-                if (p < 1) 
+
+                if (p < 1)
                 {
                     progress = p;
                     h[0] = 0;
@@ -141,7 +161,7 @@ public:
                     s[1] = sin(- angle);
                     c[1] = cos(- angle);
                 }
-                else 
+                else
                 {
                     progress = 1 - (p - 1);
                     h[0] = 50 * (0.5 - fabs(1.5 - p));
@@ -151,67 +171,66 @@ public:
                     s[1] = sin(angle);
                     c[1] = cos(angle);
                 }
-    
-                for (int li = 0; li < _N; ++li)
+
+                for (int li = 0; li < _legCount; ++li)
                 {
                     // li - leg index, gi - group index
                     int gi = li % 2;
                     Point pNew;
                     Point pCurr = _legs[li].getCurrentPos();
-                  
+
                     pNew.x = pCurr.x * c[gi] - pCurr.y * s[gi];
                     pNew.y = pCurr.x * s[gi] + pCurr.y * c[gi];
-                  
+
                     // Calc default pos
                     pNew.x -= _legs[li].getDefaultPos().x;
                     pNew.y -= _legs[li].getDefaultPos().y;
                     pNew.z = h[gi];
-    
+
                     _legs[li].reachRelativeToDefault(pNew);
                 }
-    
+
                 delay(1);
                 if (pContinue != NULL && ! pContinue())
                     return p;
-                    
+
                 p += _speedFactor /*+ 0.00 * (0.5 - fabs(0.5 - progress))*/;
             }
-    
+
             if (p > 2)
                 p = 0;
         }
-        
+
         return p;
     }
-    
-    
+
     void smoothTo(Point& to)
     {
         smoothTo(to, 0);
         smoothTo(to, 1);
     }
-    
+
     // Relative to default!
     void smoothTo(Point& to, int legGroup)
     {
-        Point relative[_N];
-        Point currentPositions[_N];
-        for (int i = legGroup; i < _N; i += 2)
+        Point relative[_legCount];
+        Point currentPositions[_legCount];
+        for (int i = legGroup; i < _legCount; i += 2)
         {
             currentPositions[i] = _legs[i].getCurrentPos();
             relative[i].assign((_legs[i].getDefaultPos() + to) - _legs[i].getCurrentPos());
         }
-      
+
         for(float p = 0; p <= 1; p += 0.03)
         {
-            for (int li = legGroup; li < _N; li += 2)
+            for (int li = legGroup; li < _legCount; li += 2)
             {
                 Point currSubStep = relative[li] * p;
                 Point currStep = currentPositions[li] + currSubStep;
                 currStep.z = _legs[li].getDefaultPos().z + to.z + 50 * (0.5 - fabs(0.5 - p));
                 _legs[li].reachAbsolute(currStep);
             }
-            
+
             delay(5);
         }
     }
@@ -219,14 +238,16 @@ public:
 private:
 
     Leg* _legs;
-    // TODO: FIXME:
-    Point _defaultPositions[6];
-    const int _N;
+    const int _legCount;
+    Leg* _mandibles;
+    const int _mandibleCount;
+
+    Point* _defaultPositions;
+    Point* _defaultMandiblePositions;
 
     Point _linearShift;
 
-    float _speedFactor; 
-
+    float _speedFactor;
 };
 
 #endif

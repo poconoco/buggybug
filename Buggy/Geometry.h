@@ -120,12 +120,12 @@ struct Point
 
         return max(dz, max(dx, dy));
     }
-    
+
     float distance(Point& that)
     {
         return sqrt(sqr(x - that.x) + sqr(y - that.y) + sqr(z - that.z));
     }
-    
+
 };
 
 void normalize2D(Point& vector, float normalizer)
@@ -155,15 +155,15 @@ void rotate2d(float cx, float cy, float angle, Point& p)
 {
     float s = sin(angle);
     float c = cos(angle);
-  
+
     // translate point back to origin:
     p.x -= cx;
     p.y -= cy;
-  
+
     // rotate point
     float xnew = p.x * c - p.y * s;
     float ynew = p.x * s + p.y * c;
-  
+
     // translate point back:
     p.x = xnew + cx;
     p.y = ynew + cy;

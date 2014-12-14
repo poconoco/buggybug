@@ -1,6 +1,52 @@
 #ifndef MARK1_CONFIG_H__
 #define MARK1_CONFIG_H__
 
+class MandibleConfiguration
+{
+public:
+
+    static void apply(Leg* mandibles, int N)
+    {
+        if (N != 2) // Only 2 mandibles supported for now
+            return;
+
+        Leg* rightMandible = mandibles;
+        Leg* leftMandible  = mandibles + 1;
+
+        rightMandible->setPins(50, 49, 48);
+        leftMandible ->setPins(25, 26, 27);
+
+        rightMandible->configureServoDirections(-1, -1,  1, false);
+        leftMandible ->configureServoDirections(-1,  1, -1, true);
+
+        /* configureFemur(float fStartZOffset,
+         *                float fStartFarOffset,
+         *                float fLength,
+         *                float fStartAngle)
+         */
+        rightMandible->configureFemur(-26, 12, 46.5, deg2rad(10));
+        leftMandible ->configureFemur(-26, 12, 46.5, deg2rad(10));
+
+        /* configureTibia(float tLenght,
+         *                float tStartAngle)
+         */
+        rightMandible->configureTibia(58, deg2rad(-70));
+        leftMandible ->configureTibia(58, deg2rad(-70));
+
+        /*
+         * configureCoxa(float cStartX,
+         *               float cStartY,
+         *               float cStartAngle,
+         *               float cFemurOffset)
+         */
+        rightMandible->configureCoxa( 30,  0, deg2rad(         70),   10);
+        leftMandible ->configureCoxa(-30,  0, deg2rad(- (180 + 70)), -10);
+
+        rightMandible->configureDefault(Point( 60, 0, -70), true);
+        leftMandible ->configureDefault(Point(-60, 0, -70), true);
+    }
+};
+
 class LegConfiguration
 {
 public:
@@ -42,7 +88,6 @@ public:
              *                float fLength,
              *                float fStartAngle)
              */
-
             rightLegs[i].configureFemur(-26, 3, 32, deg2rad(0));
             leftLegs [i].configureFemur(-26, 3, 32, deg2rad(0));
 
@@ -97,7 +142,7 @@ public:
         rightLegs[1].tuneRestAngles(PI / 2,
                                     PI / 2,
                                     PI / 2);
-                                 
+
         leftLegs[1].tuneRestAngles(PI / 2,
                                    PI / 2 - deg2rad(5),
                                    PI / 2 - deg2rad(5));

@@ -1,6 +1,5 @@
 package com.poconoco.buggyremote;
 
-
 public class BuggyBodyMovement
 {
     public byte x;
@@ -9,8 +8,9 @@ public class BuggyBodyMovement
     public byte speed;
 
     // joystick* are -1..1
-    public void encodeLinear(final double joystickX, final double joystickY)
+    public void encodeLinear(final double joystickX, final double joystickY_)
     {
+        final double joystickY = - joystickY_;
         final double length = Math.sqrt(joystickX * joystickX + joystickY
                 * joystickY);
 
@@ -45,7 +45,7 @@ public class BuggyBodyMovement
     public void encodeWithTurn(final double joystickX_, final double joystickY_)
     {
         final double joystickX = 0;
-        final double joystickY = joystickY_;
+        final double joystickY = - joystickY_;
 
         final double length = Math.sqrt(joystickX * joystickX + joystickY
                 * joystickY);

@@ -11,13 +11,13 @@ import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends Activity
     implements BuggySensors.Listener, BuggyBluetooth.Listener
 {
-
     @Override
     protected void onCreate(final Bundle savedInstanceState)
     {
@@ -28,27 +28,29 @@ public class MainActivity extends Activity
         _sensorsThread = new StateUpdateThread();
         _sensorsThread.start();
 
-        // Here bluetooth MAC address of arduino BT module hardcoded,
-        // so this app is tied to a single robot model
+        // FIXME: hardcoded UUID
         _bt.setUUID("00001101-0000-1000-8000-00805F9B34FB");
 
         setContentView(R.layout.activity_main);
+        this.findViewById(android.R.id.content).setKeepScreenOn(true);
 
-        _bodyShift = new BuggyBodyShift();
-        _bodyMovement = new BuggyBodyMovement();
+        _bodyMovementJoystick = (ImageView)findViewById(R.id.movementAreaImage);
+        _bodyShiftPitchRollJoystick = (ImageView)findViewById(R.id.bodyShiftArea);
+        _movementHint = (TextView)findViewById(R.id.movementHint);
+        _buttonBluetoothToggle = (Button)findViewById(R.id.buttonBT);
+        _buttonSendEngineToggle = (Button)findViewById(R.id.buttonEngine);
+        _buttonSendMandibleToggle = (Button)findViewById(R.id.buttonMandiblesEngine);
 
-        _bodyMovementJoystick = (ImageView) findViewById(R.id.movementAreaImage);
-        _bodyShiftPitchRollJoystick = (ImageView) findViewById(R.id.bodyShiftArea);
-        _movementHint = (TextView) findViewById(R.id.movementHint);
-        _buttonBluetoothToggle = (Button) findViewById(R.id.buttonBT);
-        _buttonSendEngineToggle = (Button) findViewById(R.id.buttonEngine);
+        _buttonSendGait1 = (Button)findViewById(R.id.buttonGait1);
+        _buttonSendGait2 = (Button)findViewById(R.id.buttonGait2);
+        _buttonSendGait3 = (Button)findViewById(R.id.buttonGait3);
+        _checkBoxUseSensors = (CheckBox)findViewById(R.id.checkBoxSensors);
+        _checkBoxSwitchLinearMovement = (CheckBox)findViewById(R.id.checkLinear);
+        _checkBoxSwitchHorizShift = (CheckBox)findViewById(R.id.checkBoxHorizShift);
+        _checkBoxSwitchMandibleControl = (CheckBox)findViewById(R.id.checkBoxMandibleControl);
 
-        _buttonSendGait1 = (Button) findViewById(R.id.buttonGait1);
-        _buttonSendGait2 = (Button) findViewById(R.id.buttonGait2);
-        _buttonSendGait3 = (Button) findViewById(R.id.buttonGait3);
-        _checkBoxUseSensors = (CheckBox) findViewById(R.id.checkBoxSensors);
-        _checkBoxSwitchLinearMovement = (CheckBox) findViewById(R.id.checkLinear);
-        _checkBoxSwitchHorizShift = (CheckBox) findViewById(R.id.checkBoxHorizShift);
+        _seekMandibleHeight = (SeekBar)findViewById(R.id.seekMandibleHeight);
+        _seekMandibleHeight.setProgress(50);
 
         _bodyMovementJoystick.setTouchDelegate(
             new MovementJoystickTouchDelegate(null, _bodyMovementJoystick));
@@ -62,6 +64,15 @@ public class MainActivity extends Activity
             public void onClick(final View v)
             {
                 _bt.write(BuggyProtocol.getToggleServoCmd());
+            }
+        });
+
+        _buttonSendMandibleToggle.setOnClickListener(new OnClickListener()
+        {
+            @Override
+            public void onClick(final View v)
+            {
+                _bt.write(BuggyProtocol.getToggleMandibleCmd());
             }
         });
 
@@ -101,6 +112,24 @@ public class MainActivity extends Activity
             }
         });
 
+        _seekMandibleHeight.setOnSeekBarChangeListener(new OnSeekBarChangeListener()
+        {
+            @Override
+            public void onStopTrackingTouch(final SeekBar seekBar)
+            {}
+
+            @Override
+            public void onStartTrackingTouch(final SeekBar seekBar)
+            {}
+
+            @Override
+            public void onProgressChanged(final SeekBar seekBar,
+                                          final int progress,
+                                          final boolean fromUser)
+            {
+                _mandibles.encodeHeight(((double)progress - 50) / 50);
+            }
+        });
     }
 
     class MovementJoystickTouchDelegate extends TouchDelegate
@@ -130,19 +159,26 @@ public class MainActivity extends Activity
                     y = _bodyMovementJoystick.getHeight();
 
                 x = x * 2 / _bodyMovementJoystick.getWidth() - 1;
-                y = -(y * 2 / _bodyMovementJoystick.getHeight() - 1);
-            } else if (event.getAction() == MotionEvent.ACTION_UP)
+                y = y * 2 / _bodyMovementJoystick.getHeight() - 1;
+
+                if (_checkBoxSwitchMandibleControl.isChecked())
+                    _mandibles.encodeLeft(x, y);
+            }
+            else if (event.getAction() == MotionEvent.ACTION_UP)
             {
                 x = 0;
                 y = 0;
             }
 
-            if (_checkBoxSwitchLinearMovement.isChecked())
-                _bodyMovement.encodeLinear(x, y);
-            else
-                _bodyMovement.encodeWithTurn(x, y);
+            if (! _checkBoxSwitchMandibleControl.isChecked())
+            {
+                if (_checkBoxSwitchLinearMovement.isChecked())
+                    _bodyMovement.encodeLinear(x, y);
+                else
+                    _bodyMovement.encodeWithTurn(x, y);
+            }
 
-            _movementHint.setText(_bodyMovement.x + ":" + _bodyMovement.y);
+            _movementHint.setText((int)(x * 100) + ":" + (int)(y * 100));
             return true;
         }
     }
@@ -173,18 +209,25 @@ public class MainActivity extends Activity
                 if (y > _bodyShiftPitchRollJoystick.getHeight())
                     y = _bodyShiftPitchRollJoystick.getHeight();
 
-                x = -(x * 2 / _bodyShiftPitchRollJoystick.getWidth() - 1);
+                x = x * 2 / _bodyShiftPitchRollJoystick.getWidth() - 1;
                 y = y * 2 / _bodyShiftPitchRollJoystick.getHeight() - 1;
 
-                _bodyShift.x = (byte) (x * 127);
-                if (_checkBoxSwitchHorizShift.isChecked())
-                    _bodyShift.y = (byte) (y * 127);
+                if (_checkBoxSwitchMandibleControl.isChecked())
+                {
+                    _mandibles.encodeRight(x, y);
+                }
                 else
-                    _bodyShift.z = (byte) (y * 127);
+                {
+                    _bodyShift.x = (byte) (- x * 127);
+                    if (_checkBoxSwitchHorizShift.isChecked())
+                        _bodyShift.y = (byte) (y * 127);
+                    else
+                        _bodyShift.z = (byte) (y * 127);
+                }
 
-                _movementHint.setText(_bodyShift.x + ":" + _bodyShift.y + ":"
-                        + _bodyShift.z);
+                _movementHint.setText((int)(x * 100) + ":" + (int)(y * 100));
             }
+
             return true;
         }
 
@@ -193,23 +236,23 @@ public class MainActivity extends Activity
     @Override
     public void onDestroy()
     {
-        _sensors.unregister();
         super.onDestroy();
+        _sensors.unregister();
     }
 
     @Override
     public void onPause()
     {
-        _sensors.unregister();
-        _bt.stop();
         super.onPause();
+        _bt.stop();
+        _sensors.unregister();
     }
 
     @Override
     public void onResume()
     {
-        _sensors.register();
         super.onResume();
+        _sensors.register();
     }
 
     @Override
@@ -246,6 +289,12 @@ public class MainActivity extends Activity
                             _prevBodyMovement.copyFrom(_bodyMovement);
 
                             _bt.write(BuggyProtocol.getBodyMovementCmd(_bodyMovement));
+
+                            if (_mandibles.differ(_prevMandibles))
+                            {
+                                _prevMandibles.copyFrom(_mandibles);
+                                _bt.write(BuggyProtocol.getMandiblesCmd(_mandibles));
+                            }
                         }
                     });
                 }
@@ -261,6 +310,7 @@ public class MainActivity extends Activity
             }
         }
     };
+
     @Override
     public void onStateChanged(final BuggyBluetooth.State state, final String stateStr)
     {
@@ -269,9 +319,7 @@ public class MainActivity extends Activity
             @Override
             public void run()
             {
-                Toast.makeText(getBaseContext(),
-                               stateStr,
-                               Toast.LENGTH_SHORT).show();
+                _movementHint.setText(stateStr);
             }
         });
 
@@ -297,6 +345,7 @@ public class MainActivity extends Activity
 
     private Button _buttonBluetoothToggle;
     private Button _buttonSendEngineToggle;
+    private Button _buttonSendMandibleToggle;
 
     private Button _buttonSendGait1;
     private Button _buttonSendGait2;
@@ -305,10 +354,16 @@ public class MainActivity extends Activity
     private CheckBox _checkBoxUseSensors;
     private CheckBox _checkBoxSwitchLinearMovement;
     private CheckBox _checkBoxSwitchHorizShift;
+    private CheckBox _checkBoxSwitchMandibleControl;
 
-    private BuggyBodyShift _bodyShift;
-    private BuggyBodyMovement _bodyMovement;
-    final BuggyBodyShift _prevBodyShift = new BuggyBodyShift();
-    final BuggyBodyMovement _prevBodyMovement = new BuggyBodyMovement();
+    private SeekBar _seekMandibleHeight;
+
+    private final BuggyBodyShift _bodyShift = new BuggyBodyShift();
+    private final BuggyBodyMovement _bodyMovement = new BuggyBodyMovement();
+    private final BuggyMandibles _mandibles = new BuggyMandibles();
+
+    private final BuggyBodyShift _prevBodyShift = new BuggyBodyShift();
+    private final BuggyBodyMovement _prevBodyMovement = new BuggyBodyMovement();
+    private final BuggyMandibles _prevMandibles = new BuggyMandibles();
 }
 

@@ -29,6 +29,18 @@
                 android:layout_height="wrap_content"
                 android:text="Engine" />
 
+            <Button
+                android:id="@+id/buttonMandiblesEngine"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mandibles" />
+
+            <SeekBar
+                android:id="@+id/seekMandibleHeight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+                        
         </LinearLayout>
 
         <LinearLayout
@@ -72,6 +84,12 @@
                     android:layout_height="wrap_content"
                     android:text="Horiz Shift" />
 
+                <CheckBox
+                    android:id="@+id/checkBoxMandibleControl"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mandibles" />
+                
             </LinearLayout>
 
             <LinearLayout
