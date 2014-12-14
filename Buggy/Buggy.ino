@@ -9,66 +9,17 @@ static Point zero(0,0,0);
 
 static const int N = 6;
 static Leg legs[N];
+static Leg mandibles[2];
 
-//static PLeg group1Legs[3] = {&legs[0], &legs[2], &legs[4]};
-//static PLeg group2Legs[3] = {&legs[1], &legs[3], &legs[5]};
-//static LegGroup legGroups[2] = { LegGroup(group1Legs, 3), LegGroup(group2Legs, 3) };
-
-//static Gait moveGait(legGroups, 2, 1);
-static SimpleMovements moveSimple(legs, N);
+static SimpleMovements moveSimple(legs, N, mandibles, 2);
 static Gait2 gait(legs);
 
 static bool attached = false;
+static bool mandiblesAttached = false;
 
-void attachAll()
-{
-    if (attached)
-        return;
-
-    attached = true;  
-    tone(9, 4000, 200);
-
-    for (int i = 0; i < N; i++)
-        legs[i].attach();
-}
-
-void detachAll()
-{
-    if (! attached)
-        return;
-
-    attached = false;
-    tone(9, 2000, 200);
-
-    for (int i = 0; i < N; i++)
-        legs[i].detach();
-}
-
-bool attachChange()
-{
-    attached ? detachAll()
-             : attachAll();
-             
-    return attached;
-}
-
-void setup() 
-{
-    Serial.begin(9600);
-    Serial1.begin(9600);
-    
-    LegConfiguration::apply(legs, N);
-    moveSimple.rememberDefault();
-   
-    for (Leg* leg = legs; leg < legs + N; leg++)
-        leg->reachRelativeToDefault(zero);
-        
-    gait.setGait6x1();
-} 
-  
 char command = 0;
 unsigned long lastCommandTime = 0;
-static float progress = 0; 
+static float progress = 0;
 
 SmoothFloat fpitch(0,0);
 SmoothFloat froll(0,0);
@@ -77,32 +28,69 @@ SmoothFloat fbodyX(0,0);
 SmoothFloat fbodyY(0,0);
 SmoothFloat fbodyZ(0,0);
 
-void tick()
+SmoothFloat fRMandibleX(0,0);
+SmoothFloat fRMandibleY(0,0);
+SmoothFloat fRMandibleZ(0,0);
+SmoothFloat fLMandibleX(0,0);
+SmoothFloat fLMandibleY(0,0);
+SmoothFloat fLMandibleZ(0,0);
+
+void attachAllLegs()
 {
-    gait.tick();
-    
-#ifdef SMOOTH_ANGLES
+    if (attached)
+        return;
+
+    attached = true;
+
     for (int i = 0; i < N; i++)
-        legs[i].tick();
-#endif
+        legs[i].attach();
+}
 
-    static unsigned long _lastTickTime = 0;
-    const unsigned long now = millis();
-    const unsigned long deltaT = now - _lastTickTime;
-    const float angleStepDelta = ((PI * 0.25) * 0.001) * (float) deltaT;
-    const float shiftStepDelta = (100.0 * 0.001) * (float) deltaT;
+void detachAllLegs()
+{
+    if (! attached)
+        return;
 
-    Point bodyShift(fbodyX.getCurrent(shiftStepDelta),
-                    fbodyY.getCurrent(shiftStepDelta),
-                    fbodyZ.getCurrent(shiftStepDelta));
+    attached = false;
 
-    moveSimple.shiftAbsolute(
-        bodyShift,
-        fpitch.getCurrent(angleStepDelta),
-        froll.getCurrent(angleStepDelta),
-        fyaw.getCurrent(angleStepDelta));
+    for (int i = 0; i < N; i++)
+        legs[i].detach();
+}
 
-    _lastTickTime = now;
+void attachMandibles()
+{
+    if (mandiblesAttached)
+        return;
+
+    mandiblesAttached = true;
+    mandibles[0].attach();
+    mandibles[1].attach();
+}
+
+void detachMandibles()
+{
+    if (! mandiblesAttached)
+        return;
+
+    mandiblesAttached = false;
+    mandibles[0].detach();
+    mandibles[1].detach();
+}
+
+bool toggleMandibles()
+{
+    mandiblesAttached ? detachMandibles()
+                      : attachMandibles();
+
+    return mandiblesAttached;
+}
+
+bool toggleLegs()
+{
+    attached ? detachAllLegs()
+             : attachAllLegs();
+
+    return attached;
 }
 
 bool tryMultibyte(char cmd)
@@ -113,7 +101,7 @@ bool tryMultibyte(char cmd)
     if (cmd == 'b')
     {
         while (Serial1.available() < 7)
-            tick();
+            tickMovements();
 
         char x, y, z, pitch, roll, yaw;
         x = Serial1.read();
@@ -136,10 +124,11 @@ bool tryMultibyte(char cmd)
 
         return true;
     }
+
     if (cmd == 'm')
     {
         while (Serial1.available() < 5)
-            tick();
+            tickMovements();
 
         char x,y,turn, speed;
 
@@ -154,8 +143,8 @@ bool tryMultibyte(char cmd)
 
         gait.setStep(Point(normalizeByte(x, 40),
                            normalizeByte(y, 40),
-                           0), 
-                     turn != 0, 
+                           0),
+                     turn != 0,
                      normalizeByte(turn, 1.0));
 
         if (speed < 0)
@@ -165,10 +154,11 @@ bool tryMultibyte(char cmd)
 
         return true;
     }
+
     if (cmd == 'g')
     {
         while (Serial1.available() < 2)
-            tick();
+            tickMovements();
 
         char gaitId = Serial1.read();
 
@@ -192,6 +182,27 @@ bool tryMultibyte(char cmd)
         lastMoveCommandTime = now;
         return true;
     }
+
+    if (cmd == 'p')
+    {
+        while (Serial1.available() < 7)
+            tickMovements();
+
+        fRMandibleX.setTarget(normalizeByte(Serial1.read(), 50));
+        fRMandibleY.setTarget(normalizeByte(Serial1.read(), 50));
+        fRMandibleZ.setTarget(normalizeByte(Serial1.read(), 50));
+
+        fLMandibleX.setTarget(normalizeByte(Serial1.read(), 50));
+        fLMandibleY.setTarget(normalizeByte(Serial1.read(), 50));
+        fLMandibleZ.setTarget(normalizeByte(Serial1.read(), 50));
+
+        // Confirm footer byte
+        if (Serial1.read() != 'P')
+            return false;
+
+        return true;
+    }
+
     if (now - lastMoveCommandTime > 1000)
     {
         gait.setSpeed(0);
@@ -203,56 +214,79 @@ bool tryMultibyte(char cmd)
     return false;
 }
 
-bool processCommands()
+void tickMovements()
 {
-    tick();
+    gait.tick();
 
+#ifdef SMOOTH_ANGLES
+    for (int i = 0; i < N; i++)
+        legs[i].tick();
+#endif
+
+    static unsigned long _lastTickTime = 0;
+    const unsigned long now = millis();
+    const unsigned long deltaT = now - _lastTickTime;
+    const float angleStepDelta = ((PI * 0.25) * 0.001) * (float) deltaT;
+    const float shiftStepDelta = (100.0 * 0.001) * (float) deltaT;
+    const float shiftMandibleDelta = (200.0 * 0.001) * (float) deltaT;
+
+    Point bodyShift(fbodyX.getCurrent(shiftStepDelta),
+                    fbodyY.getCurrent(shiftStepDelta),
+                    fbodyZ.getCurrent(shiftStepDelta));
+
+    moveSimple.shiftAbsolute(
+        bodyShift,
+        fpitch.getCurrent(angleStepDelta),
+        froll.getCurrent(angleStepDelta),
+        fyaw.getCurrent(angleStepDelta));
+
+    moveSimple.mandiblesReach(Point(fRMandibleX.getCurrent(shiftMandibleDelta),
+                                    fRMandibleY.getCurrent(shiftMandibleDelta),
+                                    fRMandibleZ.getCurrent(shiftMandibleDelta)),
+                              Point(fLMandibleX.getCurrent(shiftMandibleDelta),
+                                    fLMandibleY.getCurrent(shiftMandibleDelta),
+                                    fLMandibleZ.getCurrent(shiftMandibleDelta)));
+
+    _lastTickTime = now;
+}
+
+void setup()
+{
+    Serial1.begin(9600);
+//    Serial1.println("AT+BAUD8");
+//    delay(500);
+//    Serial1.begin(115200);
+
+    LegConfiguration::apply(legs, N);
+    MandibleConfiguration::apply(mandibles, 2);
+
+    moveSimple.rememberDefault();
+
+    for (Leg* leg = legs; leg < legs + N; leg++)
+        leg->reachRelativeToDefault(zero);
+
+    for (Leg* mandible = mandibles; mandible < mandibles + 2; mandible++)
+        mandible->reachRelativeToDefault(zero);
+
+    gait.setGait6x1();
+}
+
+void loop()
+{
+    tickMovements();
     char incoming;
+
     if (Serial1.available() > 0)
         incoming = Serial1.read();
-    else return true;
+    else
+        return;
 
     if (tryMultibyte(incoming))
-        return true;
+        return;
 
     // One shot actions
     if (incoming == ' ')
-    {
-        attachChange();
-
-        command = incoming;
-        lastCommandTime = millis();
-
-        return false;
-    }
-
-    static char lastMoveCommand = 0;
-    static char lastCommand = 0;
-    bool moved = true;
-
-    // Command is the same, continuing
-    if (incoming == command)
-    {
-        lastCommandTime = millis();
-        return true;
-    }
-
-    lastCommand = command;
-    if (moved)
-        lastMoveCommand = command;
-
-    // Check if continuous command timed out
-    if (incoming <= 0 && millis() - lastCommandTime < 500)
-        return true;
-
-    command = incoming;
-    lastCommandTime = millis();
-
-    tone(9, 8000, 100);
-    return false;
-}
- 
-void loop() 
-{ 
-    processCommands();
+        toggleLegs();
+    else if (incoming == '_')
+        toggleMandibles();
 }

@@ -11,7 +11,6 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.util.Log;
-import android.widget.Toast;
 
 public class BuggyBluetooth
 {
@@ -44,13 +43,11 @@ public class BuggyBluetooth
         _adapter = BluetoothAdapter.getDefaultAdapter();
         if (_adapter == null)
         {
-            Toast.makeText(_context,
-                           "No bluetooth on device",
-                           Toast.LENGTH_SHORT).show();
+            _listener.onStateChanged(_state, "No bluetooth on device");
             return;
         }
 
-        if (!_adapter.isEnabled())
+        if (! _adapter.isEnabled())
         {
             final Intent enableBtIntent = new Intent(
                     BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -58,12 +55,12 @@ public class BuggyBluetooth
             return;
         }
 
+        // FIXME: hardcoded MAC
         if (_state == State.STATE_NONE)
             connect(_adapter.getRemoteDevice("00:12:10:12:10:04"));
 
         if (_state == State.STATE_CONNECTED)
             stop();
-
     }
 
     public synchronized void connect(final BluetoothDevice device)
@@ -143,8 +140,6 @@ public class BuggyBluetooth
         setState(State.STATE_NONE);
     }
 
-
-
     /**
      * Stop all threads
      */
@@ -214,7 +209,6 @@ public class BuggyBluetooth
     {
         write(str.getBytes());
     }
-
 
     /**
      * This thread runs during a connection with a remote device. It handles all
@@ -323,7 +317,6 @@ public class BuggyBluetooth
         }
     }
 
-
     /**
      * This thread runs while attempting to make an outgoing connection with a
      * device. It runs straight through; the connection either succeeds or
@@ -409,36 +402,18 @@ public class BuggyBluetooth
     private void connectionLost()
     {
         setState(State.STATE_NONE);
-
-        /*
-         * // Send a failure message back to the Activity Message msg =
-         * mHandler.obtainMessage(BlueTerm.MESSAGE_TOAST); Bundle bundle = new
-         * Bundle(); bundle.putString(BlueTerm.TOAST,
-         * "Device connection was lost"); msg.setData(bundle);
-         * mHandler.sendMessage(msg);
-         */
     }
 
     private void connectionFailed()
     {
         setState(State.STATE_NONE);
-
-        /*
-         * // Send a failure message back to the Activity Message msg =
-         * mHandler.obtainMessage(BlueTerm.MESSAGE_TOAST); Bundle bundle = new
-         * Bundle(); bundle.putString(BlueTerm.TOAST,
-         * "Unable to connect device"); msg.setData(bundle);
-         * mHandler.sendMessage(msg);
-         */
     }
-
-
 
     private final Listener _listener;
     private final Activity _context;
 
     private String _uuid;
-    private State _state;
+    private State _state = State.STATE_NONE;
 
     private ConnectThread _connectThread;
     private ConnectedThread _connectedThread;

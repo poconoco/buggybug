@@ -1,36 +1,11 @@
 Serial commands with one character:
 
-w - forward
-a - step left
-s - backward
-d - step right
-
-q - turn left
-e - turn right
-
-z - reset walk position
-x - reset body reach position
-
-r - body up
-f - body down
-
-y - body shift fwd
-g - body shift left
-h - body shift bkwd
-j - body shift right
-
-t - body roll left
-u - body roll right
-i - body pitch fwd
-k - body pitch bkwd
+" " - (single space, no quotes) attach/detach all leg servos
+"_" - (single underline, no quotes) attach/detach mandible servos
 
 Multibyte commands:
 
 b<X><Y><Z><Pitch><Roll><Yaw>B - body shift, x, y and z are signed bytes, 0 are centers
 m<X><Y><Turn><Speed>M - movement, x, y are signed bytes, Turn is signed byte (o - no turn), Speed - unsigned byte
 g<gait>G
-
-
-
-
-
+p<RX><RY><RZ><LX><LY><LZ>P - mandible movement, right and left independently
