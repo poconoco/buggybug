@@ -10,16 +10,16 @@ public:
         , _mandibles(mandibles)
         , _mandibleCount(mandibleCount)
     {
-        _defaultPositions = new Point[_legCount];
-        _defaultMandiblePositions = new Point[_mandibleCount];
+        //_defaultPositions = new Point[_legCount];
+        //_defaultMandiblePositions = new Point[_mandibleCount];
 
         _speedFactor = 0.025;
     }
 
     ~SimpleMovements()
     {
-        delete _defaultPositions;
-        delete _defaultMandiblePositions;
+        ..delete _defaultPositions;
+        //delete _defaultMandiblePositions;
     }
 
     void rememberDefault()
@@ -51,8 +51,8 @@ public:
 
     void mandiblesReach(Point right, Point left)
     {
-        for (byte i = 0; i < _mandibleCount; ++i)
-            _mandibles[i].shiftDefault(_defaultMandiblePositions[i] + ((i % 2) ? left : right));
+        _mandibles[0].shiftDefault(_defaultMandiblePositions[0] + right);
+        _mandibles[1].shiftDefault(_defaultMandiblePositions[1] + left);
     }
 
     void shift(Point& delta)
@@ -242,8 +242,9 @@ private:
     Leg* _mandibles;
     const int _mandibleCount;
 
-    Point* _defaultPositions;
-    Point* _defaultMandiblePositions;
+    // FIXME
+    Point _defaultPositions[6];
+    Point _defaultMandiblePositions[2];
 
     Point _linearShift;
 

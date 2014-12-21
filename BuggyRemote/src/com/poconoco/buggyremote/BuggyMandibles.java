@@ -39,8 +39,8 @@ public class BuggyMandibles
     // all args are -1..1
     public void encodeHeight(final double height)
     {
-        ry = (byte) (height * 127);
-        ly = (byte) (height * 127);
+        ry = (byte) (height * 127.0);
+        ly = (byte) (height * 127.0);
     }
 
     public boolean differ(final BuggyMandibles arg)

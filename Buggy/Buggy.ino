@@ -187,18 +187,22 @@ bool tryMultibyte(char cmd)
     {
         while (Serial1.available() < 7)
             tickMovements();
-
-        fRMandibleX.setTarget(normalizeByte(Serial1.read(), 50));
-        fRMandibleY.setTarget(normalizeByte(Serial1.read(), 50));
-        fRMandibleZ.setTarget(normalizeByte(Serial1.read(), 50));
-
-        fLMandibleX.setTarget(normalizeByte(Serial1.read(), 50));
-        fLMandibleY.setTarget(normalizeByte(Serial1.read(), 50));
-        fLMandibleZ.setTarget(normalizeByte(Serial1.read(), 50));
+            
+        char buffer[6];
+        for (int i = 0; i < sizeof(buffer); ++i)
+          buffer[i] = Serial1.read();
 
         // Confirm footer byte
         if (Serial1.read() != 'P')
             return false;
+            
+        fRMandibleX.setTarget(normalizeByte(buffer[0], 50));
+        fRMandibleY.setTarget(normalizeByte(buffer[1], 50));
+        fRMandibleZ.setTarget(normalizeByte(buffer[2], 50));
+
+        fLMandibleX.setTarget(normalizeByte(buffer[3], 50));
+        fLMandibleY.setTarget(normalizeByte(buffer[4], 50));
+        fLMandibleZ.setTarget(normalizeByte(buffer[5], 50));
 
         return true;
     }
@@ -268,7 +272,7 @@ void setup()
     for (Leg* mandible = mandibles; mandible < mandibles + 2; mandible++)
         mandible->reachRelativeToDefault(zero);
 
-    gait.setGait6x1();
+    gait.setGait3x2();
 }
 
 void loop()
