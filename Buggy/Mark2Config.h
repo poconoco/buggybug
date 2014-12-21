@@ -39,11 +39,11 @@ public:
          *               float cStartAngle,
          *               float cFemurOffset)
          */
-        rightMandible->configureCoxa( 30,  0, deg2rad(         70),   10);
-        leftMandible ->configureCoxa(-30,  0, deg2rad(- (180 + 70)), -10);
+        rightMandible->configureCoxa( 30,  -20, deg2rad(         70),   10);
+        leftMandible ->configureCoxa(-30,  -20, deg2rad(- (180 + 70)), -10);
 
-        rightMandible->configureDefault(Point( 60, 0, -70), true);
-        leftMandible ->configureDefault(Point(-60, 0, -70), true);
+        rightMandible->configureDefault(Point( 30, 0, -70), true);
+        leftMandible ->configureDefault(Point(-30, 0, -70), true);
     }
 };
 

@@ -127,7 +127,7 @@ public class MainActivity extends Activity
                                           final int progress,
                                           final boolean fromUser)
             {
-                _mandibles.encodeHeight(((double)progress - 50) / 50);
+                _mandibles.encodeHeight((progress - 50.0) / 50.0);
             }
         });
     }

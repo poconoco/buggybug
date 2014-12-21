@@ -127,9 +127,8 @@ public:
         _defaultPos = def;
         _currentPos = def;
 
-//        if (move)
-//            reach(def);
-        reset();
+        if (move)
+            reach(def);
     }
 
     void shiftDefault(Point def)
@@ -138,8 +137,7 @@ public:
         _currentPos.assign(_currentPos + delta);
         _defaultPos = def;
 
-        //reach(_currentPos);
-        reset();
+        reach(_currentPos);
     }
 
     void shiftDefaultRelative(Point& delta)
@@ -147,37 +145,32 @@ public:
         _currentPos.assign(_currentPos + delta);
         _defaultPos.assign(_defaultPos + delta);
 
-        //reach(_currentPos);
-        reset();
+        reach(_currentPos);
     }
 
     void reachRelativeToDefault(Point& dest)
     {
         _currentPos.assign(_defaultPos + dest);
-        //reach(_currentPos);
-        reset();
+        reach(_currentPos);
     }
 
     void reachRelativeToDefaultAndRotate(Point& dest, float angle, float cx, float cy)
     {
         _currentPos.assign(_defaultPos + dest);
         rotate2d(cx, cy, angle, _currentPos);
-//        reach(_currentPos);
-        reset();
+        reach(_currentPos);
     }
 
     void reachRelativeToCurrent(Point& dest)
     {
         _currentPos.assign(_currentPos + dest);
-//        reach(_currentPos);
-        reset();
+        reach(_currentPos);
     }
 
     void reachAbsolute(Point& dest)
     {
         _currentPos = dest;
-//        reach(_currentPos);
-        reset();
+        reach(_currentPos);
     }
 
     Point getCurrentRelative()
