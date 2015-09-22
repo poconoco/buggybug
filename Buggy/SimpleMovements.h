@@ -18,7 +18,7 @@ public:
 
     ~SimpleMovements()
     {
-        ..delete _defaultPositions;
+        //delete _defaultPositions;
         //delete _defaultMandiblePositions;
     }
 

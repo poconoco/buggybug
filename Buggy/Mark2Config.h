@@ -136,23 +136,23 @@ public:
                                     PI / 2);
 
         leftLegs[0].tuneRestAngles(PI / 2,
-                                   PI / 2 + deg2rad(10),
+                                   PI / 2 + deg2rad(15),
                                    PI / 2);
 
         rightLegs[1].tuneRestAngles(PI / 2,
-                                    PI / 2,
-                                    PI / 2);
-
-        leftLegs[1].tuneRestAngles(PI / 2,
-                                   PI / 2 - deg2rad(5),
-                                   PI / 2 - deg2rad(5));
-
-        rightLegs[2].tuneRestAngles(PI / 2,
                                     PI / 2 + deg2rad(10),
                                     PI / 2);
 
+        leftLegs[1].tuneRestAngles(PI / 2,
+                                   PI / 2 + deg2rad(10),
+                                   PI / 2 + deg2rad(5));
+
+        rightLegs[2].tuneRestAngles(PI / 2,
+                                    PI / 2 + deg2rad(20),
+                                    PI / 2);
+
         leftLegs[2].tuneRestAngles(PI / 2,
-                                   PI / 2 + deg2rad(5),
+                                   PI / 2 + deg2rad(15),
                                    PI / 2);
 
     }

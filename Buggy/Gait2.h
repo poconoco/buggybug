@@ -8,6 +8,13 @@
 #include "Geometry.h"
 #include "SmoothFloat.h"
 
+enum Gait
+{
+    gait2x3,
+    gait3x2,
+    gait6x1
+};
+
 class LegCycle
 {
 public:
@@ -132,7 +139,7 @@ public:
 
     Gait2(Leg* legs)
         : _legs(legs)
-        , _stepHeight(50)
+        , _stepHeight(30)
         , _stepPerSecond(0, 0)
         , _lastTickTime(0)
         , _currentCyclePos(0)
@@ -147,6 +154,29 @@ public:
 
         _rightLegCycles = _legCycles;
         _leftLegCycles = _legCycles + 3;
+    }
+    
+    void setGait(Gait gait)
+    {
+        static Gait prevGait;
+        
+        if (prevGait == gait)
+            return;
+        
+        prevGait = gait;
+      
+        switch (gait)
+        {
+            case gait2x3:
+                setGait2x3();
+                break;
+            case gait3x2:
+                setGait3x2();
+                break;
+            case gait6x1:
+                setGait6x1();
+                break;
+        }
     }
 
     void setGait2x3()
@@ -234,6 +264,11 @@ public:
     void setSpeed(float stepsPerSecond)
     {
         _stepPerSecond.setTarget(stepsPerSecond);
+    }
+    
+    void stop()
+    {
+        _currentCyclePos = 0;
     }
 
     void tick()

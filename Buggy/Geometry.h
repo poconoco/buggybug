@@ -140,6 +140,11 @@ bool floatEqual(float a, float b)
     return fabs(a - b) < 0.00001;
 }
 
+float normalize(int value, int min, float oneDivRangeHalf, float normal)
+{
+    return (float) (value - min * 1.5) * oneDivRangeHalf * normal;
+}
+
 float normalizeByte(char b, float normal)
 {
     return ((float) b) * normal * 0.0078125; // * (1 / 128.0);
