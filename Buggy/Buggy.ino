@@ -24,6 +24,7 @@ static float progress = 0;
 SmoothFloat fpitch(0,0);
 SmoothFloat froll(0,0);
 SmoothFloat fyaw(0,0);
+
 SmoothFloat fbodyX(0,0);
 SmoothFloat fbodyY(0,0);
 SmoothFloat fbodyZ(0,0);
@@ -93,7 +94,7 @@ bool toggleLegs()
     return attached;
 }
 
-bool tryMultibyte(char cmd)
+bool trySerialMultibyte(char cmd)
 {
     static unsigned long lastMoveCommandTime = 0;
     const unsigned long now = millis();
@@ -118,9 +119,6 @@ bool tryMultibyte(char cmd)
         fbodyX.setTarget(normalizeByte(x, 40));
         fbodyY.setTarget(normalizeByte(y, 40));
         fbodyZ.setTarget(normalizeByte(z, 40));
-        fpitch.setTarget(normalizeByte(pitch, PI / 6));
-        froll.setTarget(normalizeByte(roll, PI / 6));
-        fyaw.setTarget(normalizeByte(yaw, PI / 6));
 
         return true;
     }
@@ -222,15 +220,10 @@ void tickMovements()
 {
     gait.tick();
 
-#ifdef SMOOTH_ANGLES
-    for (int i = 0; i < N; i++)
-        legs[i].tick();
-#endif
-
     static unsigned long _lastTickTime = 0;
     const unsigned long now = millis();
     const unsigned long deltaT = now - _lastTickTime;
-    const float angleStepDelta = ((PI * 0.25) * 0.001) * (float) deltaT;
+    const float angleStepDelta = ((PI * 0.50) * 0.005) * (float) deltaT;
     const float shiftStepDelta = (100.0 * 0.001) * (float) deltaT;
     const float shiftMandibleDelta = (200.0 * 0.001) * (float) deltaT;
 
@@ -238,25 +231,49 @@ void tickMovements()
                     fbodyY.getCurrent(shiftStepDelta),
                     fbodyZ.getCurrent(shiftStepDelta));
 
+
     moveSimple.shiftAbsolute(
         bodyShift,
         fpitch.getCurrent(angleStepDelta),
         froll.getCurrent(angleStepDelta),
         fyaw.getCurrent(angleStepDelta));
 
-    moveSimple.mandiblesReach(Point(fRMandibleX.getCurrent(shiftMandibleDelta),
-                                    fRMandibleY.getCurrent(shiftMandibleDelta),
-                                    fRMandibleZ.getCurrent(shiftMandibleDelta)),
-                              Point(fLMandibleX.getCurrent(shiftMandibleDelta),
-                                    fLMandibleY.getCurrent(shiftMandibleDelta),
-                                    fLMandibleZ.getCurrent(shiftMandibleDelta)));
-
     _lastTickTime = now;
+}
+
+const int rcPins[6] = { 2, 3, 4, 5, 6, 7 };
+const int rcMin = 1300;
+const int rcMax = 2600;
+const int rcMid = (rcMin + rcMax) / 2;
+
+const int rcMinThreshold = rcMin + (rcMax - rcMin) / 3;
+const int rcMaxThreshold = rcMax - (rcMax - rcMin) / 3;
+
+const int rcMidLowThreshold = rcMid - 50;
+const int rcMidHighThreshold = rcMid + 50;
+
+const float rcOneDivRangeHalf = 2.0 / (rcMax - rcMin);
+
+const int tumblerAPin = 8;
+const int tumblerBPin = 9;
+
+void configureRCReceiver()
+{
+    for (int i = 0; i < 6; ++i)
+        pinMode(rcPins[i], INPUT);
+}
+
+void configureTumbler()
+{
+    pinMode(tumblerAPin, INPUT);
+    pinMode(tumblerBPin, INPUT);
 }
 
 void setup()
 {
     Serial1.begin(9600);
+    Serial.begin(9600);
+    Serial.println("ready");
 //    Serial1.println("AT+BAUD8");
 //    delay(500);
 //    Serial1.begin(115200);
@@ -272,20 +289,22 @@ void setup()
     for (Leg* mandible = mandibles; mandible < mandibles + 2; mandible++)
         mandible->reachRelativeToDefault(zero);
 
-    gait.setGait3x2();
+    configureRCReceiver();
+    configureTumbler();
+
+    gait.setGait2x3();
 }
 
-void loop()
+void trySerialInput()
 {
-    tickMovements();
     char incoming;
-
+    
     if (Serial1.available() > 0)
         incoming = Serial1.read();
     else
         return;
 
-    if (tryMultibyte(incoming))
+    if (trySerialMultibyte(incoming))
         return;
 
     // One shot actions
@@ -293,4 +312,104 @@ void loop()
         toggleLegs();
     else if (incoming == '_')
         toggleMandibles();
+}
+
+void readTumblerInput()
+{
+    int tumblerA = digitalRead(tumblerAPin);
+    int tumblerB = digitalRead(tumblerBPin);
+
+    Gait newGait = gait2x3;
+    static Gait previousGait = newGait;
+  
+    if (tumblerA == LOW && tumblerB == HIGH)
+        newGait = gait3x2;
+    else if (tumblerA == HIGH && tumblerB == LOW)
+        newGait = gait6x1;
+        
+    if (previousGait != newGait)
+        gait.setGait(newGait);
+}
+
+bool isRcInputMiddle(int input)
+{
+    return input > rcMidLowThreshold && input < rcMidHighThreshold;
+}
+
+int alignIfMiddle(int input)
+{
+    return isRcInputMiddle(input) ? rcMid : input;
+}
+
+void readRCReceiverInput()
+{
+    int rcInput[6];
+    bool engaged = false;
+    for (int i = 0; i < 6; ++i)
+    {
+        rcInput[i] = pulseIn(rcPins[i], HIGH, 10000);
+        if (rcInput[i] != 0)
+            engaged = true;
+    }
+    
+    if (! engaged)
+    {
+        detachAllLegs();
+        return;
+    }
+    
+    attachAllLegs();
+   
+    int rawTurn = alignIfMiddle(rcInput[0]);
+    int rawY = alignIfMiddle(rcInput[1]);
+
+    static unsigned long firstZeroYTime = 0;
+    
+    if (rawY == rcMid)
+    {
+        if (firstZeroYTime == 0)
+            firstZeroYTime = millis();
+        else
+            if (millis() - firstZeroYTime > 1000)
+                gait.stop();
+    }
+    else
+    {
+        firstZeroYTime = 0;
+    }
+    
+    float x = 0; // turn, no linear
+    float y = normalize(rawY, rcMin, rcOneDivRangeHalf, 40.0);
+    float turn = normalize(rawTurn, rcMin, rcOneDivRangeHalf, 1.0);   
+       
+    gait.setStep(Point(x, y, 0),
+                       ! isRcInputMiddle(rawTurn),
+                       turn);
+
+    gait.setSpeed(fabs(normalize(rawY, rcMin, rcOneDivRangeHalf, 2.0)));
+    
+    int rawPitch = alignIfMiddle(rcInput[2]);
+    int rawRoll = alignIfMiddle(rcInput[3]);
+    int rawBodyZ = alignIfMiddle(rcInput[5]);
+    
+    fpitch.setTarget(normalize(rawPitch, rcMin, rcOneDivRangeHalf, PI / 6));
+    froll.setTarget(normalize(rawRoll, rcMin, rcOneDivRangeHalf, PI / 6));
+    fbodyZ.setTarget(normalize(rawBodyZ, rcMin, rcOneDivRangeHalf, 40));
+
+    int rawGait = rcInput[4];
+    if (rawGait < rcMinThreshold)
+        gait.setGait(gait6x1);
+    else if (rawGait >= rcMinThreshold && rawGait < rcMaxThreshold)
+        gait.setGait(gait2x3);
+    else 
+        gait.setGait(gait3x2);
+        
+    //Serial.println(fpitch.getCurrent());
+}
+
+void loop()
+{
+    tickMovements();
+    //readTumblerInput();
+    readRCReceiverInput();
 }
