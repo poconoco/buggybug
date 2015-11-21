@@ -257,6 +257,47 @@ const float rcOneDivRangeHalf = 2.0 / (rcMax - rcMin);
 const int tumblerAPin = 8;
 const int tumblerBPin = 9;
 
+void filterHistoryNoise(int *rcInput)
+{
+    static const int RC_HISTORY_SIZE = 10;
+    static const int RC_NUM = 6;
+    static int rcHistory[RC_NUM][RC_HISTORY_SIZE];
+    static bool historyFull = false;
+    static int pointer = 0;
+    
+    for (int i = 0; i < RC_NUM; ++i)
+        rcHistory[i][pointer] = rcInput[i];
+        
+    pointer++;
+    
+    if (pointer == RC_HISTORY_SIZE)
+        pointer = 0;
+
+    if (! historyFull)
+    {
+        if (pointer == 0)
+            historyFull = true;
+        else
+            return;
+    }    
+    
+    int average[RC_NUM];
+    memset(average,0,sizeof(average));
+    
+    int p = pointer;
+    for (int pi = 0; pi < RC_HISTORY_SIZE; ++pi)
+    {
+        for (int i = 0; i < RC_NUM; ++i)
+            average[i] += rcHistory[i][p];
+        
+        if (++p == RC_HISTORY_SIZE)
+            p = 0;
+    }
+    
+    for (int i = 0; i < RC_NUM; ++i)
+        rcInput[i] = average[i] / RC_HISTORY_SIZE;
+}
+
 void configureRCReceiver()
 {
     for (int i = 0; i < 6; ++i)
@@ -352,6 +393,8 @@ void readRCReceiverInput()
             engaged = true;
     }
     
+    Serial.println(rcInput[0]);
+    
     if (! engaged)
     {
         detachAllLegs();
@@ -359,6 +402,7 @@ void readRCReceiverInput()
     }
     
     attachAllLegs();
+    filterHistoryNoise(rcInput);
    
     int rawTurn = alignIfMiddle(rcInput[0]);
     int rawY = alignIfMiddle(rcInput[1]);
